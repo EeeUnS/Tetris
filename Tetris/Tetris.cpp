@@ -455,11 +455,14 @@ void checkKey(void)
             switch (sw)
             {
             case eDir::LEFT: //왼쪽키 눌렀을때
-                FALLTHROUGH
+                if (checkCrush(blockX - 1, blockY, blockRotation) == true) moveBlock(sw);
+                break;
             case eDir::RIGHT: //오른쪽 방향키 눌렀을때- 위와 동일하게 처리됨 
-                FALLTHROUGH
+                if (checkCrush(blockX + 1, blockY, blockRotation) == true) moveBlock(sw);
+                break;
             case eDir::DOWN: //아래쪽 방향키 눌렀을때-위와 동일하게 처리됨 
-                FALLTHROUGH
+                if (checkCrush(blockX, blockY + 1, blockRotation) == true) moveBlock(sw);
+                break;
             case eDir::UP: //위쪽 방향키 눌렀을때 
                 if (checkCrush(blockX, blockY, (blockRotation + 1) % 4) == true)
                 {
