@@ -126,7 +126,7 @@ void drawMain(void); //게임판을 그림
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
 void checkKey(void); //키보드로 키를 입력받음 
 void dropBlock(void); //블록을 아래로 떨어트림 
-bool checkCrush(int blockX, int blockY, int rotation); //blockX, by위치에 rotation회전값을 같는 경우 충돌 판단 
+bool isCrash(int blockX, int blockY, int rotation); //blockX, by위치에 rotation회전값을 같는 경우 충돌 판단 
 void moveBlock(eDir dir); //dir방향으로 블록을 움직임 
 void checkLine(void); //줄이 가득찼는지를 판단하고 지움 
 void checkLevelUp(void); //레벨목표가 달성되었는지를 판단하고 levelup시킴 
@@ -194,7 +194,7 @@ int main() {
             drawMain();
             Sleep(blockDownDelay);
             
-            if (bCrash && checkCrush(blockX, blockY + 1, blockRotation) == false)
+            if (bCrash && isCrash(blockX, blockY + 1, blockRotation))
             {
                 Sleep(100);
             }
@@ -208,7 +208,7 @@ int main() {
         dropBlock(); // 블록을 한칸 내림 
         checkLevelUp(); // 레벨업을 체크 
         checkGameOver(); //게임오버를 체크 
-        if (bNeedNewBlock == true)
+        if (bNeedNewBlock)
         {
             makeNewBlock(); // 뉴 블럭 flag가 있는 경우 새로운 블럭 생성 
         }
@@ -461,30 +461,30 @@ void checkKey(void)
             switch (dir)
             {
             case eDir::LEFT: //왼쪽키 눌렀을때
-                if (checkCrush(blockX - 1, blockY, blockRotation) == true)
+                if (!isCrash(blockX - 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
             case eDir::RIGHT: //오른쪽 방향키 눌렀을때- 위와 동일하게 처리됨 
-                if (checkCrush(blockX + 1, blockY, blockRotation) == true)
+                if (!isCrash(blockX + 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
             case eDir::DOWN: //아래쪽 방향키 눌렀을때-위와 동일하게 처리됨 
-                if (checkCrush(blockX, blockY + 1, blockRotation) == true)
+                if (!isCrash(blockX, blockY + 1, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
             case eDir::UP: //위쪽 방향키 눌렀을때 
-                if (checkCrush(blockX, blockY, (blockRotation + 1) % 4) == true)
+                if (!isCrash(blockX, blockY, (blockRotation + 1) % 4))
                 {
                     moveBlock(dir);
                 }
                 //회전할 수 있는지 체크 후 가능하면 회전
-                else if (bCrash == 1 && checkCrush(blockX, blockY - 1, (blockRotation + 1) % 4) == true)
+                else if (bCrash == 1 && !isCrash(blockX, blockY - 1, (blockRotation + 1) % 4))
                 {
                     //바닥에 닿은 경우 위쪽으로 한칸띄워서 회전이 가능하면 그렇게 함(특수동작)
                     moveBlock(eDir::ROTATABLE_CRASH);
@@ -525,11 +525,11 @@ void checkKey(void)
 
 void dropBlock(void) 
 {
-    if (bCrash && checkCrush(blockX, blockY + 1, blockRotation) == true)
+if (bCrash && !isCrash(blockX, blockY + 1, blockRotation))
     {
         bCrash = false; //밑이 비어있으면 crush flag 끔 
     }
-    if (bCrash && checkCrush(blockX, blockY + 1, blockRotation) == false) { //밑이 비어있지않고 crush flag가 켜저있으면 
+    if (bCrash && isCrash(blockX, blockY + 1, blockRotation)) { //밑이 비어있지않고 crush flag가 켜저있으면 
         for (int i = 0; i < MAIN_Y; i++) 
         { //현재 조작중인 블럭을 굳힘 
             for (int j = 0; j < MAIN_X; j++) 
@@ -546,17 +546,17 @@ void dropBlock(void)
         return; //함수 종료 
     }
 
-    if (checkCrush(blockX, blockY + 1, blockRotation))
+    if (!isCrash(blockX, blockY + 1, blockRotation))
     {
         moveBlock(eDir::DOWN); //밑이 비어있으면 밑으로 한칸 이동 
     }
-    else //if (checkCrush(blockX, blockY + 1, blockRotation) == false)
+    else
     {
         bCrash = true; //밑으로 이동이 안되면  crush flag를 켬
     }
 }
 
-bool checkCrush(int blockX, int blockY, int blockRotation) 
+bool isCrash(int blockX, int blockY, int blockRotation) 
 {   //지정된 좌표와 회전값으로 충돌이 있는지 검사 
     for (int i = 0; i < 4; i++) 
     {
@@ -564,11 +564,11 @@ bool checkCrush(int blockX, int blockY, int blockRotation)
         { //지정된 위치의 게임판과 블럭모양을 비교해서 겹치면 false를 리턴 
             if (BLOCKS[blockType][blockRotation][i][j] == 1 && static_cast<int>(main_org[blockY + i][blockX + j]) > 0)
             {
-                return false;
+                return true;
             }
         }
     }
-    return true; //하나도 안겹치면 true리턴 
+    return false; //하나도 안겹치면 true리턴 
 };
 
 void moveBlock(eDir dir) 
