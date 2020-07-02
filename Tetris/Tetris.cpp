@@ -96,19 +96,27 @@ int blockX;
 int blockY; //이동중인 블록의 게임판상의 x,y좌표를 저장 
 
 // todo menoBoard에 보여줄것 구조체로 묶기
+/*
+level
+goal
+present score
+last score
+bestscore
+*/
 int key; //키보드로 입력받은 키값을 저장 
-int blockDownDelay; // 블록 내려오는 딜레이
 int presentLevel; //현재 presentLevel 
-int ScoreNextLevel; //다음레벨로 넘어가기 위한 목표점수 
-int deletedLineCount; //현재 레벨에서 제거한 줄 수를 저장  
 int presentScore; //현재 점수 
 int lastScore = 0; //마지막게임점수 
 int bestScore = 0; //최고게임점수 
+int ScoreNextLevel; //다음레벨로 넘어가기 위한 목표점수 
 
-int new_block_on = 0; //새로운 블럭이 필요함을 알리는 flag 
-int crush_on = 0; //현재 이동중인 블록이 충돌상태인지 알려주는 flag 
-int level_up_on = 0; //다음레벨로 진행(현재 레벨목표가 완료되었음을) 알리는 flag 
-int space_key_on = 0; //hard drop상태임을 알려주는 flag 
+int deletedLineCount; //현재 레벨에서 제거한 줄 수를 저장  
+int blockDownDelay; // 블록 내려오는 딜레이
+
+bool bNeedNewBlock = false; //새로운 블럭이 필요함을 알리는 flag 
+bool bCrash = false; //현재 이동중인 블록이 충돌상태인지 알려주는 flag 
+bool bLevelUp = false; //다음레벨로 진행(현재 레벨목표가 완료되었음을) 알리는 flag 
+bool bSpaceKey = false; //hard drop상태임을 알려주는 flag 
 
 void drawTitle(void); //게임시작화면 
 void reset(void); //게임판 초기화 
@@ -143,34 +151,34 @@ int getRandom(const int min, const int max)
 }
 
 
-void setcursortype(eCursorType c) {
-    CONSOLE_CURSOR_INFO CurInfo;
+void setCursorType(eCursorType c) {
+    CONSOLE_CURSOR_INFO curInfo;
     switch (c) 
     {
         case eCursorType::NO_CURSOR:
-            CurInfo.dwSize = 1;
-            CurInfo.bVisible = FALSE;
+            curInfo.dwSize = 1;
+            curInfo.bVisible = FALSE;
             break;
         case eCursorType::SOLID_CURSOR:
-            CurInfo.dwSize = 100;
-            CurInfo.bVisible = TRUE;
+            curInfo.dwSize = 100;
+            curInfo.bVisible = TRUE;
             break;
         case eCursorType::NOMAL_CURSOR:
-            CurInfo.dwSize = 20;
-            CurInfo.bVisible = TRUE;
+            curInfo.dwSize = 20;
+            curInfo.bVisible = TRUE;
             break;
         default:
             ASSERT(false,"eCursorType input error");
             break;
     }
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &CurInfo);
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &curInfo);
 }
 
 int main() {
     static_assert(sizeof(main_org) == 23*11*sizeof(eBlockStatus), "error");
 
     srand((unsigned)time(NULL));
-    setcursortype(eCursorType::NO_CURSOR);
+    setCursorType(eCursorType::NO_CURSOR);
     drawTitle();
     reset(); //게임판 리셋 
 
@@ -183,21 +191,21 @@ int main() {
             drawMain();
             Sleep(blockDownDelay);
             
-            if (crush_on && checkCrush(blockX, blockY + 1, blockRotation) == false)
+            if (bCrash && checkCrush(blockX, blockY + 1, blockRotation) == false)
             {
                 Sleep(100);
             }
             
             //블록이 충돌중인경우 추가로 이동및 회전할 시간을 갖음 
-            if (space_key_on == 1) { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
-                space_key_on = 0;
+            if (bSpaceKey) { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
+                bSpaceKey = false;
                 break;
             }
         }
         dropBlock(); // 블록을 한칸 내림 
         checkLevelUp(); // 레벨업을 체크 
         checkGameOver(); //게임오버를 체크 
-        if (new_block_on == 1)
+        if (bNeedNewBlock == true)
         {
             makeNewBlock(); // 뉴 블럭 flag가 있는 경우 새로운 블럭 생성 
         }
@@ -280,7 +288,7 @@ void reset(void) {
     presentScore = 0;
     ScoreNextLevel = 1000;
     key = 0;
-    crush_on = 0;
+    bCrash = false;
     deletedLineCount = 0;
     blockDownDelay = 100;
 
@@ -406,7 +414,7 @@ void makeNewBlock(void)
     blockTypeNext = rand() % 7; //다음 블럭을 만듦 
     blockRotation = 0;  //회전은 0번으로 가져옴 
 
-    new_block_on = 0; //makeNewBlock flag를 끔  
+    bNeedNewBlock = false; //makeNewBlock flag를 끔  
 
     for (int i = 0; i < 4; i++) 
     { //게임판 blockX, by위치에 블럭생성  
@@ -470,7 +478,7 @@ void checkKey(void)
                     moveBlock(sw);
                 }
                 //회전할 수 있는지 체크 후 가능하면 회전
-                else if (crush_on == 1 && checkCrush(blockX, blockY - 1, (blockRotation + 1) % 4) == true)
+                else if (bCrash == 1 && checkCrush(blockX, blockY - 1, (blockRotation + 1) % 4) == true)
                 {
                     //바닥에 닿은 경우 위쪽으로 한칸띄워서 회전이 가능하면 그렇게 함(특수동작)
                     moveBlock(eDir::ROTATABLE_CRASH);
@@ -486,8 +494,8 @@ void checkKey(void)
             switch (sw) 
             {
             case eDir::SPACE: //스페이스키 눌렀을때 
-                space_key_on = 1; //스페이스키 flag를 띄움 
-                while (crush_on == 0) 
+                bSpaceKey = true; //스페이스키 flag를 띄움 
+                while (bCrash == 0) 
                 { //바닥에 닿을때까지 이동시킴 
                     dropBlock();
                     presentScore += presentLevel; // hard drop 보너스
@@ -512,11 +520,11 @@ void checkKey(void)
 
 void dropBlock(void) 
 {
-    if (crush_on && checkCrush(blockX, blockY + 1, blockRotation) == true)
+    if (bCrash && checkCrush(blockX, blockY + 1, blockRotation) == true)
     {
-        crush_on = 0; //밑이 비어있으면 crush flag 끔 
+        bCrash = false; //밑이 비어있으면 crush flag 끔 
     }
-    if (crush_on && checkCrush(blockX, blockY + 1, blockRotation) == false) { //밑이 비어있지않고 crush flag가 켜저있으면 
+    if (bCrash && checkCrush(blockX, blockY + 1, blockRotation) == false) { //밑이 비어있지않고 crush flag가 켜저있으면 
         for (int i = 0; i < MAIN_Y; i++) 
         { //현재 조작중인 블럭을 굳힘 
             for (int j = 0; j < MAIN_X; j++) 
@@ -527,9 +535,9 @@ void dropBlock(void)
                 }
             }
         }
-        crush_on = 0; //flag를 끔 
-        checkLine(); //라인체크를 함 
-        new_block_on = 1; //새로운 블럭생성 flag를 켬    
+        bCrash = false;
+        checkLine(); 
+        bNeedNewBlock = true; 
         return; //함수 종료 
     }
 
@@ -539,7 +547,7 @@ void dropBlock(void)
     }
     else //if (checkCrush(blockX, blockY + 1, blockRotation) == false)
     {
-        crush_on++; //밑으로 이동이 안되면  crush flag를 켬
+        bCrash = true; //밑으로 이동이 안되면  crush flag를 켬
     }
 }
 
@@ -702,7 +710,7 @@ void checkLine(void)
         }
         if (lineBlockNum == MAIN_X - 2) 
         { //블록이 가득 찬 경우 
-            if (level_up_on == 0) 
+            if (bLevelUp == 0) 
             { //레벨업상태가 아닌 경우에(레벨업이 되면 자동 줄삭제가 있음) 
                 presentScore += 100 * presentLevel; //점수추가 
                 deletedLineCount++; //지운 줄 갯수 카운트 증가 
@@ -752,7 +760,7 @@ void checkLevelUp(void)
     if (deletedLineCount >= 10) 
     { //레벨별로 10줄씩 없애야함. 10줄이상 없앤 경우 
         drawMain();
-        level_up_on = 1; //레벨업 flag를 띄움 
+        bLevelUp = true; //레벨업 flag를 띄움 
         presentLevel += 1; //레벨을 1 올림 
         deletedLineCount = 0; //지운 줄수 초기화   
 
@@ -818,7 +826,7 @@ void checkLevelUp(void)
                 ASSERT(false, "고려하지않은 레벨");
                 break;
         }
-        level_up_on = 0; //레벨업 flag꺼줌
+        bLevelUp = false; //레벨업 flag꺼줌
 
         gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel); //레벨표시 
         gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount); // 레벨목표 표시 
