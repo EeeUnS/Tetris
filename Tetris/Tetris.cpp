@@ -11,7 +11,6 @@
 #pragma comment(lib, "winmm.lib")
 #pragma warning(disable:4996)
 
-#define FALLTHROUGH
 #define ASSERT(condition, msg) \
     if(!(condition)){ \
         fprintf(stderr, "%s(%s: %d)\n", msg, __FILE__, __LINE__); \
@@ -468,7 +467,7 @@ eKeyBoardInput checkKey(void)
                 }
                 break;
             case eKeyBoardInput::P: //P(대문자) 눌렀을때 
-                FALLTHROUGH
+                [[fallthrough]];
             case eKeyBoardInput::p: //p(소문자) 눌렀을때 
                 pauseGame(); //일시정지 
                 break;
