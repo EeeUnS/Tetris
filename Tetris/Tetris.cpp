@@ -20,7 +20,6 @@
     } \
 //    ASSERT(false, "error!!!");
 
-
 enum class eDir
 {
     LEFT =  75 , //좌로 이동    //키보드값들 
@@ -82,13 +81,10 @@ int blockTypeNext; //다음 블록값 저장
 //main_cpy와 배열을 비교해서 값이 달라진 곳만 모니터에 고침 
 int main_org[MAIN_Y][MAIN_X]; 
 int main_cpy[MAIN_Y][MAIN_X]; 
-                              
-                              
 
 int STATUS_Y_GOAL; //GOAL 정보표시위치 Y 좌표 저장 
 int STATUS_Y_LEVEL; //LEVEL 정보표시위치 Y 좌표 저장
 int STATUS_Y_SCORE; //SCORE 정보표시위치 Y 좌표 저장
-
 
 int blockX;
 int blockY; //이동중인 블록의 게임판상의 x,y좌표를 저장 
@@ -97,8 +93,8 @@ int key; //키보드로 입력받은 키값을 저장
 // 블록 내려오는 딜레이
 int blockDownDelay; 
 int presentLevel; //현재 presentLevel 
-int needNextLevelScore; //다음레벨로 넘어가기 위한 목표점수 
-int removeLineNum; //현재 레벨에서 제거한 줄 수를 저장  
+int ScoreNextLevel; //다음레벨로 넘어가기 위한 목표점수 
+int deletedLineCount; //현재 레벨에서 제거한 줄 수를 저장  
 int presentScore; //현재 점수 
 int lastScore = 0; //마지막게임점수 
 int bestScore = 0; //최고게임점수 
@@ -276,10 +272,10 @@ void reset(void) {
 
     presentLevel = 1; //각종변수 초기화 
     presentScore = 0;
-    needNextLevelScore = 1000;
+    ScoreNextLevel = 1000;
     key = 0;
     crush_on = 0;
-    removeLineNum = 0;
+    deletedLineCount = 0;
     blockDownDelay = 100;
 
     system("cls"); //화면지움 
@@ -293,7 +289,7 @@ void reset(void) {
 }
 
 void resetMain(void) 
-{ //게임판을 초기화  
+{ 
     for (int i = 0; i < MAIN_Y; i++) 
     { // 게임판을 0으로 초기화  
         for (int j = 0; j < MAIN_X; j++) 
@@ -329,10 +325,10 @@ void resetMainCpy(void) { //main_cpy를 초기화
 
 void drawMap(void) 
 { //게임 상태 표시를 나타내는 함수  
-    int y = 3;             // presentLevel, goal, score만 게임중에 값이 바뀔수 도 있음 그 y값을 따로 저장해둠 
-                         // 그래서 혹시 게임 상태 표시 위치가 바뀌어도 그 함수에서 안바꿔도 되게.. 
+    int y = 3;// presentLevel, goal, score만 게임중에 값이 바뀔수 도 있음 그 y값을 따로 저장해둠 
+ // 그래서 혹시 게임 상태 표시 위치가 바뀌어도 그 함수에서 안바꿔도 되게.. 
     gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL = y); printf(" LEVEL : %5d", presentLevel);
-    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL = y + 1); printf(" GOAL  : %5d", 10 - removeLineNum);
+    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL = y + 1); printf(" GOAL  : %5d", 10 - deletedLineCount);
     gotoxy(STATUS_X_ADJ, y + 2); printf("+-  N E X T  -+ ");
     gotoxy(STATUS_X_ADJ, y + 3); printf("|             | ");
     gotoxy(STATUS_X_ADJ, y + 4); printf("|             | ");
@@ -398,7 +394,6 @@ void drawMain(void)
 
 void makeNewBlock(void) 
 { //새로운 블록 생성  
-
     blockX = (MAIN_X / 2) - 1; //블록 생성 위치x좌표(게임판의 가운데) 
     blockY = 0;  //블록 생성위치 y좌표(제일 위) 
     blockType = blockTypeNext; //다음블럭값을 가져옴 
@@ -438,7 +433,7 @@ void makeNewBlock(void)
 
 void checkKey(void) 
 {
-    key = 0; //키값 초기화  
+    int key = 0; //키값 초기화  
 
     if (kbhit()) 
     { //키입력이 있는 경우  
@@ -520,7 +515,10 @@ void dropBlock(void)
         { //현재 조작중인 블럭을 굳힘 
             for (int j = 0; j < MAIN_X; j++) 
             {
-                if (main_org[i][j] == ACTIVE_BLOCK) main_org[i][j] = INACTIVE_BLOCK;
+                if (main_org[i][j] == ACTIVE_BLOCK)
+                {
+                    main_org[i][j] = INACTIVE_BLOCK;
+                }
             }
         }
         crush_on = 0; //flag를 끔 
@@ -539,7 +537,8 @@ void dropBlock(void)
     }
 }
 
-bool checkCrush(int blockX, int blockY, int blockRotation) { //지정된 좌표와 회전값으로 충돌이 있는지 검사 
+bool checkCrush(int blockX, int blockY, int blockRotation) 
+{   //지정된 좌표와 회전값으로 충돌이 있는지 검사 
     for (int i = 0; i < 4; i++) 
     {
         for (int j = 0; j < 4; j++) 
@@ -562,14 +561,20 @@ void moveBlock(eDir dir)
         { //현재좌표의 블럭을 지움 
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j] = EMPTY;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j] = EMPTY;
+                }
             }
         }
         for (int i = 0; i < 4; i++) 
         { //왼쪽으로 한칸가서 active block을 찍음 
-            for (int j = 0; j < 4; j++) 
+            for (int j = 0; j < 4; j++)
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j - 1] = ACTIVE_BLOCK;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j - 1] = ACTIVE_BLOCK;
+                }
             }
         }
         blockX--; //좌표값 이동 
@@ -580,14 +585,20 @@ void moveBlock(eDir dir)
         {
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j] = EMPTY;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j] = EMPTY;
+                }
             }
         }
         for (int i = 0; i < 4; i++) 
         {
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j + 1] = ACTIVE_BLOCK;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j + 1] = ACTIVE_BLOCK;
+                }
             }
         }
         blockX++;
@@ -598,14 +609,20 @@ void moveBlock(eDir dir)
         {
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j] = EMPTY;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j] = EMPTY;
+                }
             }
         }
         for (int i = 0; i < 4; i++) 
         {
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i + 1][blockX + j] = ACTIVE_BLOCK;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i + 1][blockX + j] = ACTIVE_BLOCK;
+                }
             }
         }
         blockY++;
@@ -616,7 +633,10 @@ void moveBlock(eDir dir)
         { //현재좌표의 블럭을 지움  
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j] = EMPTY;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j] = EMPTY;
+                }
             }
         }
         blockRotation = (blockRotation + 1) % 4; //회전값을 1증가시킴(3에서 4가 되는 경우는 0으로 되돌림) 
@@ -624,7 +644,10 @@ void moveBlock(eDir dir)
         { //회전된 블록을 찍음 
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j] = ACTIVE_BLOCK;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j] = ACTIVE_BLOCK;
+                }
             }
         }
         break;
@@ -635,15 +658,21 @@ void moveBlock(eDir dir)
         {
             for (int j = 0; j < 4; j++) 
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i][blockX + j] = EMPTY;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i][blockX + j] = EMPTY;
+                }
             }
         }
         blockRotation = (blockRotation + 1) % 4;
         for (int i = 0; i < 4; i++) 
         {
-            for (int j = 0; j < 4; j++) 
+            for (int j = 0; j < 4; j++)
             {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1) main_org[blockY + i - 1][blockX + j] = ACTIVE_BLOCK;
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i - 1][blockX + j] = ACTIVE_BLOCK;
+                }
             }
         }
         blockY--;
@@ -670,7 +699,7 @@ void checkLine(void)
             if (level_up_on == 0) 
             { //레벨업상태가 아닌 경우에(레벨업이 되면 자동 줄삭제가 있음) 
                 presentScore += 100 * presentLevel; //점수추가 
-                removeLineNum++; //지운 줄 갯수 카운트 증가 
+                deletedLineCount++; //지운 줄 갯수 카운트 증가 
                 combo++; //콤보수 증가  
             }
             for (int k = i; k > 1; k--) 
@@ -694,9 +723,11 @@ void checkLine(void)
             i--;
         }
     }
-    if (combo) 
+
+	if (combo > 0)
     { //줄 삭제가 있는 경우 점수와 레벨 목표를 새로 표시함  
-        if (combo > 1) { //2콤보이상인 경우 경우 보너스및 메세지를 게임판에 띄웠다가 지움 
+        if (combo > 1) 
+        { //2콤보이상인 경우 경우 보너스및 메세지를 게임판에 띄웠다가 지움 
             gotoxy(MAIN_X_ADJ + (MAIN_X / 2) - 1, MAIN_Y_ADJ + blockY - 2); 
             printf("%d COMBO!", combo);
             Sleep(500);
@@ -705,18 +736,19 @@ void checkLine(void)
 //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
         }
 
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (removeLineNum <= 10) ? 10 - removeLineNum : 0);
+        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (deletedLineCount <= 10) ? 10 - deletedLineCount : 0);
         gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore);
     }
 }
 
-void checkLevelUp(void) {
-    if (removeLineNum >= 10) 
+void checkLevelUp(void) 
+{
+    if (deletedLineCount >= 10) 
     { //레벨별로 10줄씩 없애야함. 10줄이상 없앤 경우 
         drawMain();
         level_up_on = 1; //레벨업 flag를 띄움 
         presentLevel += 1; //레벨을 1 올림 
-        removeLineNum = 0; //지운 줄수 초기화   
+        deletedLineCount = 0; //지운 줄수 초기화   
 
         for (int i = 0; i < 4; i++) 
         {
@@ -735,7 +767,8 @@ void checkLevelUp(void) {
         resetMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
 //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
 
-        for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (presentLevel - 1); i--) { //레벨업보상으로 각 레벨-1의 수만큼 아랫쪽 줄을 지워줌 
+        for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (presentLevel - 1); i--) 
+        { //레벨업보상으로 각 레벨-1의 수만큼 아랫쪽 줄을 지워줌 
             for (int j = 1; j < MAIN_X - 1; j++) {
                 main_org[i][j] = INACTIVE_BLOCK; // 줄을 블록으로 모두 채우고 
                 gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i); // 별을 찍어줌.. 이뻐보이게 
@@ -782,7 +815,7 @@ void checkLevelUp(void) {
         level_up_on = 0; //레벨업 flag꺼줌
 
         gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel); //레벨표시 
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - removeLineNum); // 레벨목표 표시 
+        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount); // 레벨목표 표시 
 
     }
 }
