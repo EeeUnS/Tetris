@@ -97,7 +97,8 @@ int blockY; //이동중인 블록의 게임판상의 x,y좌표를 저장
 
 // todo menoBoard에 보여줄것 구조체로 묶기
 int key; //키보드로 입력받은 키값을 저장 
-int blockDownDelay; // 블록 내려오는 딜레이
+// 블록 내려오는 딜레이
+int blockDownDelay; 
 int presentLevel; //현재 presentLevel 
 int ScoreNextLevel; //다음레벨로 넘어가기 위한 목표점수 
 int deletedLineCount; //현재 레벨에서 제거한 줄 수를 저장  
