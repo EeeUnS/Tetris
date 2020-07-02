@@ -1,9 +1,8 @@
 ﻿#include<stdio.h>
 #include<windows.h>
 #include<conio.h>
-#include<stdlib.h>
-#include<cstdio>
 #include <mmsystem.h>
+#include<stdlib.h>
 #include<assert.h>
 #include<errors.h>
 #include<random>
@@ -34,7 +33,6 @@ enum class eDir:int
     //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
 };
 
-
 enum class eBlockStatus:int
 {
     ACTIVE_BLOCK = -2, // 게임판배열에 저장될 블록의 상태들 
@@ -42,7 +40,7 @@ enum class eBlockStatus:int
     EMPTY = 0,        // 블록이 이동할 수 없는 공간은 양수로 표현 
     WALL = 1,
     INACTIVE_BLOCK = 2,// 이동이 완료된 블록값 
-    NONBLCOK = 100
+    NON_BLCOK = 100
     // for copy
 };
 
@@ -120,8 +118,8 @@ bool bSpaceKey = false; //hard drop상태임을 알려주는 flag
 
 void drawTitle(void); //게임시작화면 
 void reset(void); //게임판 초기화 
-void resetMain(void); //메인 게임판(main_org[][]를 초기화)
-void resetMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
+void initialMainOrg(void); //메인 게임판(main_org[][]를 초기화)
+void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
 void drawMap(void); //게임 전체 인터페이스를 표시 
 void drawMain(void); //게임판을 그림 
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
@@ -293,7 +291,8 @@ void reset(void) {
     blockDownDelay = 100;
 
     system("cls"); //화면지움 
-    resetMain(); // main_org를 초기화 
+    initialMainOrg(); // main_org를 초기화 
+    initialMainCpy();
     drawMap(); // 게임화면을 그림
     drawMain(); // 게임판을 그림 
 
@@ -302,16 +301,9 @@ void reset(void) {
 
 }
 
-void resetMain(void) 
+void initialMainOrg(void) 
 { 
-    for (int i = 0; i < MAIN_Y; i++) 
-    { // 게임판을 0으로 초기화  
-        for (int j = 0; j < MAIN_X; j++) 
-        {
-            main_org[i][j] = eBlockStatus::EMPTY;
-            main_cpy[i][j] = eBlockStatus::NONBLCOK;
-        }
-    }
+    memset(main_org, 0, sizeof(main_org));
     for (int j = 1; j < MAIN_X; j++) 
     { //y값이 3인 위치에 천장을 만듦 
         main_org[3][j] = eBlockStatus::CEILLING;
@@ -327,12 +319,13 @@ void resetMain(void)
     }
 }
 
-void resetMainCpy(void) { //main_cpy를 초기화 
+//main_org와 같은 숫자가 없게 하기 위함  게임판에 게임에 사용되지 않는 숫자를 넣음 
+void initialMainCpy(void) {
     for (int i = 0; i < MAIN_Y; i++) 
-    {         //게임판에 게임에 사용되지 않는 숫자를 넣음 
+    {         
         for (int j = 0; j < MAIN_X; j++) 
-        {  //이는 main_org와 같은 숫자가 없게 하기 위함 
-            main_cpy[i][j] = eBlockStatus::NONBLCOK;
+        {  
+            main_cpy[i][j] = eBlockStatus::NON_BLCOK;
         }
     }
 }
@@ -746,7 +739,7 @@ void checkLine(void)
             printf("%d COMBO!", combo);
             Sleep(500);
             presentScore += (combo * presentLevel * 100);
-            resetMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
+            initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
 //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
         }
 
@@ -778,7 +771,7 @@ void checkLevelUp(void)
             printf("☆SPEED UP!☆");
             Sleep(200);
         }
-        resetMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
+        initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
 //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
 
         for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (presentLevel - 1); i--) 
@@ -900,7 +893,7 @@ void pauseGame(void) { //게임 일시정지 함수
     getch(); //키입력시까지 대기 
 
     system("cls"); //화면 지우고 새로 그림 
-    resetMainCpy();
+    initialMainCpy();
     drawMain();
     drawMap();
 
