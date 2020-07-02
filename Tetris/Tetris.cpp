@@ -20,7 +20,7 @@
 //    ASSERT(false, "error!!!");
 
 //키보드값들 
-enum class eDir:int
+enum class eKeyBoardInput:int
 {
     LEFT =  75 , //좌로 이동    
     RIGHT =  77 , //우로 이동 
@@ -118,7 +118,6 @@ int blockDownDelay; // 블록 내려오는 딜레이
 bool bNeedNewBlock = false; //새로운 블럭이 필요함을 알리는 flag 
 bool bCrash = false; //현재 이동중인 블록이 충돌상태인지 알려주는 flag 
 bool bLevelUp = false; //다음레벨로 진행(현재 레벨목표가 완료되었음을) 알리는 flag 
-bool bSpaceKey = false; //hard drop상태임을 알려주는 flag 
 
 void drawTitle(void); //게임시작화면 
 void resetBoard(void); //게임판 초기화 
@@ -127,10 +126,10 @@ void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
 void drawInfoBoard(void); //게임 전체 인터페이스를 표시 
 void drawGameBoard(void); //게임판을 그림 
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
-void checkKey(void); //키보드로 키를 입력받음 
+eKeyBoardInput checkKey(void); //키보드로 키를 입력받음 
 void dropBlock(void); //블록을 아래로 떨어트림 
 bool isCrash(int blockX, int blockY, int rotation); //blockX, by위치에 rotation회전값을 같는 경우 충돌 판단 
-void moveBlock(eDir dir); //dir방향으로 블록을 움직임 
+void moveBlock(eKeyBoardInput dir); //dir방향으로 블록을 움직임 
 void checkLine(void); //줄이 가득찼는지를 판단하고 지움 
 void checkLevelUp(void); //레벨목표가 달성되었는지를 판단하고 levelup시킴 
 void checkGameOver(void); //게임오버인지 판단하고 게임오버를 진행 
@@ -166,24 +165,25 @@ int main() {
 
     while (1) 
     {
+        //블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
         for (int i = 0; i < 5; i++) 
         { 
-            //블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
-            checkKey(); //키입력확인 
+            eKeyBoardInput dir = checkKey(); //키입력확인 
             drawGameBoard();
             Sleep(blockDownDelay);
             
+            //블록이 충돌중인경우 추가로 이동및 회전할 시간을 갖음 
             if (bCrash && isCrash(blockX, blockY + 1, blockRotation))
             {
                 Sleep(100);
             }
             
-            //블록이 충돌중인경우 추가로 이동및 회전할 시간을 갖음 
-            if (bSpaceKey) { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
-                bSpaceKey = false;
+            if ( dir == eKeyBoardInput::SPACE) 
+            { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
                 break;
             }
         }
+
         dropBlock(); // 블록을 한칸 내림 
         checkLevelUp(); // 레벨업을 체크 
         checkGameOver(); //게임오버를 체크 
@@ -420,14 +420,15 @@ void makeNewBlock(void)
     }
 }
 
-void checkKey(void) 
+eKeyBoardInput checkKey(void)
 {
     int key = 0;
+    eKeyBoardInput dir;
 
     if (kbhit()) 
     {
         key = getch(); //키값을 받음
-        eDir dir = static_cast<eDir>(key);
+        dir = static_cast<eKeyBoardInput>(key);
         if (key == 224) 
         { //방향키인경우 
             do 
@@ -435,37 +436,37 @@ void checkKey(void)
                 key = getch(); 
             }while (key == 224);//방향키지시값을 버림 
 
-            dir = static_cast<eDir>(key);
+            dir = static_cast<eKeyBoardInput>(key);
             switch (dir)
             {
-            case eDir::LEFT:
+            case eKeyBoardInput::LEFT:
                 if (!isCrash(blockX - 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eDir::RIGHT:
+            case eKeyBoardInput::RIGHT:
                 if (!isCrash(blockX + 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eDir::DOWN:
+            case eKeyBoardInput::DOWN:
                 if (!isCrash(blockX, blockY + 1, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eDir::UP:
+            case eKeyBoardInput::UP:
                 if (!isCrash(blockX, blockY, (blockRotation + 1) % 4))
                 {
                     moveBlock(dir);
                 }
                 //회전할 수 있는지 체크 후 가능하면 회전
-                else if (bCrash == 1 && !isCrash(blockX, blockY - 1, (blockRotation + 1) % 4))
+                else if (bCrash && !isCrash(blockX, blockY - 1, (blockRotation + 1) % 4))
                 {
                     //바닥에 닿은 경우 위쪽으로 한칸띄워서 회전이 가능하면 그렇게 함(특수동작)
-                    moveBlock(eDir::ROTATABLE_CRASH);
+                    moveBlock(eKeyBoardInput::ROTATABLE_CRASH);
                 }
             default:
                 break;
@@ -476,21 +477,21 @@ void checkKey(void)
         { //방향키가 아닌경우 
             switch (dir) 
             {
-            case eDir::SPACE: //스페이스키 눌렀을때 
-                bSpaceKey = true; //스페이스키 flag를 띄움 
-                while (bCrash == 0) 
+            case eKeyBoardInput::SPACE: //스페이스키 눌렀을때 
+                
+                while (!bCrash) 
                 { //바닥에 닿을때까지 이동시킴 
                     dropBlock();
                     presentScore += presentLevel; // hard drop 보너스
                     gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore); //점수 표시  
                 }
                 break;
-            case eDir::P: //P(대문자) 눌렀을때 
+            case eKeyBoardInput::P: //P(대문자) 눌렀을때 
                 FALLTHROUGH
-            case eDir::p: //p(소문자) 눌렀을때 
+            case eKeyBoardInput::p: //p(소문자) 눌렀을때 
                 pauseGame(); //일시정지 
                 break;
-            case eDir::ESC: //ESC눌렀을때 
+            case eKeyBoardInput::ESC: //ESC눌렀을때 
                 system("cls"); //화면을 지우고 
                 exit(0); //게임종료 
             }
@@ -500,6 +501,7 @@ void checkKey(void)
     {
         getch(); //키버퍼를 비움 
     }
+    return dir;
 }
 
 void dropBlock(void) 
@@ -508,6 +510,7 @@ void dropBlock(void)
     {
         bCrash = false; //밑이 비어있으면 crush flag 끔 
     }
+
     if (bCrash && isCrash(blockX, blockY + 1, blockRotation)) 
     { //밑이 비어있지않고 crush flag가 켜저있으면 
         for (int i = 0; i < MAIN_Y; i++) 
@@ -528,7 +531,7 @@ void dropBlock(void)
 
     if (!isCrash(blockX, blockY + 1, blockRotation))
     {
-        moveBlock(eDir::DOWN); //밑이 비어있으면 밑으로 한칸 이동 
+        moveBlock(eKeyBoardInput::DOWN); //밑이 비어있으면 밑으로 한칸 이동 
     }
     else
     {
@@ -551,32 +554,32 @@ bool isCrash(int blockX, int blockY, int blockRotation)
     return false; //하나도 안겹치면 true리턴 
 }
 
-void moveBlock(eDir dir) 
+void moveBlock(eKeyBoardInput key) 
 { //블록을 이동시킴 
     eraseBlock();
-    switch (dir) 
+    switch (key) 
     {
-    case eDir::LEFT: 
+    case eKeyBoardInput::LEFT: 
         setActiveBlock(0, -1);
         blockX--; //좌표값 이동 
         break;
 
-    case eDir::RIGHT:   
+    case eKeyBoardInput::RIGHT:   
         setActiveBlock(0, 1);
         blockX++;
         break;
 
-    case eDir::DOWN: 
+    case eKeyBoardInput::DOWN: 
         setActiveBlock(1, 0);
         blockY++;
         break;
 
-    case eDir::UP: //키보드 위쪽 눌렀을때 회전시킴. 
+    case eKeyBoardInput::UP: //키보드 위쪽 눌렀을때 회전시킴. 
         blockRotation = (blockRotation + 1) % 4; //회전값을 1증가시킴(3에서 4가 되는 경우는 0으로 되돌림) 
         setActiveBlock(0, 0);
         break;
 
-    case eDir::ROTATABLE_CRASH: //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
+    case eKeyBoardInput::ROTATABLE_CRASH: //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
               //이를 동작시키는 특수동작 
         blockRotation = (blockRotation + 1) % 4;
         setActiveBlock(-1, 0);
@@ -850,21 +853,21 @@ void setCursorType(eCursorType c)
     CONSOLE_CURSOR_INFO curInfo;
     switch (c)
     {
-    case eCursorType::NO_CURSOR:
-        curInfo.dwSize = 1;
-        curInfo.bVisible = FALSE;
-        break;
-    case eCursorType::SOLID_CURSOR:
-        curInfo.dwSize = 100;
-        curInfo.bVisible = TRUE;
-        break;
-    case eCursorType::NOMAL_CURSOR:
-        curInfo.dwSize = 20;
-        curInfo.bVisible = TRUE;
-        break;
-    default:
-        ASSERT(false, "eCursorType input error");
-        break;
+        case eCursorType::NO_CURSOR:
+            curInfo.dwSize = 1;
+            curInfo.bVisible = FALSE;
+            break;
+        case eCursorType::SOLID_CURSOR:
+            curInfo.dwSize = 100;
+            curInfo.bVisible = TRUE;
+            break;
+        case eCursorType::NOMAL_CURSOR:
+            curInfo.dwSize = 20;
+            curInfo.bVisible = TRUE;
+            break;
+        default:
+            ASSERT(false, "eCursorType input error");
+            break;
     }
     SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &curInfo);
 }
