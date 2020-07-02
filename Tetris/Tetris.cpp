@@ -40,12 +40,13 @@ enum class eBlockStatus:int
     EMPTY = 0,        // 블록이 이동할 수 없는 공간은 양수로 표현 
     WALL = 1,
     INACTIVE_BLOCK = 2,// 이동이 완료된 블록값 
-    NON_BLCOK = 100
-    // for copy
+    NON_BLCOK = 100 // for copy
+    
 };
 
 constexpr int MAIN_X =  11 ; //게임판 가로크기 
 constexpr int MAIN_Y =  23 ; //게임판 세로크기 
+
 constexpr int MAIN_X_ADJ =  3  ;//게임판 위치조정 
 constexpr int MAIN_Y_ADJ =  1  ;//게임판 위치조정 
 constexpr int STATUS_X_ADJ = MAIN_X_ADJ + MAIN_X + 1;//게임정보표시 위치조정 
@@ -117,7 +118,7 @@ bool bLevelUp = false; //다음레벨로 진행(현재 레벨목표가 완료되
 bool bSpaceKey = false; //hard drop상태임을 알려주는 flag 
 
 void drawTitle(void); //게임시작화면 
-void reset(void); //게임판 초기화 
+void resetBoard(void); //게임판 초기화 
 void initialMainOrg(void); //메인 게임판(main_org[][]를 초기화)
 void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
 void drawMap(void); //게임 전체 인터페이스를 표시 
@@ -131,6 +132,10 @@ void checkLine(void); //줄이 가득찼는지를 판단하고 지움
 void checkLevelUp(void); //레벨목표가 달성되었는지를 판단하고 levelup시킴 
 void checkGameOver(void); //게임오버인지 판단하고 게임오버를 진행 
 void pauseGame(void);//게임을 일시정지시킴 
+void eraseBlock();
+
+void setActiveBlock(int X, int Y);
+
 
 void gotoxy(int x, int y) { //gotoxy함수 
     COORD pos = { 2 * (short)x,(short)y };
@@ -178,7 +183,7 @@ int main() {
     srand((unsigned)time(NULL));
     setCursorType(eCursorType::NO_CURSOR);
     drawTitle();
-    reset(); //게임판 리셋 
+    resetBoard(); //게임판 리셋 
 
     while (1) 
     {
@@ -269,7 +274,7 @@ void drawTitle(void) {
 
 }
 
-void reset(void) {
+void resetBoard(void) {
 
     FILE* file = fopen("score.dat", "rt"); // presentScore.dat파일을 연결 
     if (file == NULL) 
@@ -369,7 +374,7 @@ void drawMain(void)
         {
             if (main_cpy[i][j] != main_org[i][j]) 
             { //cpy랑 비교해서 값이 달라진 부분만 새로 그려줌.
-                                                //이게 없으면 게임판전체를 계속 그려서 느려지고 반짝거림
+			 //이게 없으면 게임판전체를 계속 그려서 느려지고 반짝거림
                 gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i);
                 switch (main_org[i][j]) 
                 {
@@ -414,7 +419,6 @@ void makeNewBlock(void)
         for (int j = 0; j < 4; j++) 
         {
             if (BLOCKS[blockType][blockRotation][i][j] == 1)
-            
             {
                 main_org[blockY + i][blockX + j] = eBlockStatus::ACTIVE_BLOCK;
             }
@@ -445,7 +449,7 @@ void checkKey(void)
     if (kbhit()) 
     { //키입력이 있는 경우  
         key = getch(); //키값을 받음
-        eDir sw = static_cast<eDir>(key);
+        eDir dir = static_cast<eDir>(key);
         if (key == 224) 
         { //방향키인경우 
             do 
@@ -453,22 +457,31 @@ void checkKey(void)
                 key = getch(); 
             }while (key == 224);//방향키지시값을 버림 
 
-            sw = static_cast<eDir>(key);
-            switch (sw)
+            dir = static_cast<eDir>(key);
+            switch (dir)
             {
             case eDir::LEFT: //왼쪽키 눌렀을때
-                if (checkCrush(blockX - 1, blockY, blockRotation) == true) moveBlock(sw);
+                if (checkCrush(blockX - 1, blockY, blockRotation) == true)
+                {
+                    moveBlock(dir);
+                }
                 break;
             case eDir::RIGHT: //오른쪽 방향키 눌렀을때- 위와 동일하게 처리됨 
-                if (checkCrush(blockX + 1, blockY, blockRotation) == true) moveBlock(sw);
+                if (checkCrush(blockX + 1, blockY, blockRotation) == true)
+                {
+                    moveBlock(dir);
+                }
                 break;
             case eDir::DOWN: //아래쪽 방향키 눌렀을때-위와 동일하게 처리됨 
-                if (checkCrush(blockX, blockY + 1, blockRotation) == true) moveBlock(sw);
+                if (checkCrush(blockX, blockY + 1, blockRotation) == true)
+                {
+                    moveBlock(dir);
+                }
                 break;
             case eDir::UP: //위쪽 방향키 눌렀을때 
                 if (checkCrush(blockX, blockY, (blockRotation + 1) % 4) == true)
                 {
-                    moveBlock(sw);
+                    moveBlock(dir);
                 }
                 //회전할 수 있는지 체크 후 가능하면 회전
                 else if (bCrash == 1 && checkCrush(blockX, blockY - 1, (blockRotation + 1) % 4) == true)
@@ -477,14 +490,13 @@ void checkKey(void)
                     moveBlock(eDir::ROTATABLE_CRASH);
                 }
             default:
-                //ASSERT(false, "도달하면 안되는 부분");
                 break;
             }
             
         }
         else 
         { //방향키가 아닌경우 
-            switch (sw) 
+            switch (dir) 
             {
             case eDir::SPACE: //스페이스키 눌렀을때 
                 bSpaceKey = true; //스페이스키 flag를 띄움 
@@ -561,127 +573,33 @@ bool checkCrush(int blockX, int blockY, int blockRotation)
 
 void moveBlock(eDir dir) 
 { //블록을 이동시킴 
+    eraseBlock();
     switch (dir) 
     {
     case eDir::LEFT: //왼쪽방향 
-        for (int i = 0; i < 4; i++) 
-        { //현재좌표의 블럭을 지움 
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
-                }
-            }
-        }
-        for (int i = 0; i < 4; i++) 
-        { //왼쪽으로 한칸가서 active block을 찍음 
-            for (int j = 0; j < 4; j++)
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j - 1] = eBlockStatus::ACTIVE_BLOCK;
-                }
-            }
-        }
+        setActiveBlock(0, -1);
         blockX--; //좌표값 이동 
         break;
 
     case eDir::RIGHT:    //오른쪽 방향. 왼쪽방향이랑 같은 원리로 동작 
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
-                }
-            }
-        }
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j + 1] = eBlockStatus::ACTIVE_BLOCK;
-                }
-            }
-        }
+        setActiveBlock(0, 1);
         blockX++;
         break;
 
     case eDir::DOWN:    //아래쪽 방향. 왼쪽방향이랑 같은 원리로 동작
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
-                }
-            }
-        }
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i + 1][blockX + j] = eBlockStatus::ACTIVE_BLOCK;
-                }
-            }
-        }
+        setActiveBlock(1, 0);
         blockY++;
         break;
 
     case eDir::UP: //키보드 위쪽 눌렀을때 회전시킴. 
-        for (int i = 0; i < 4; i++) 
-        { //현재좌표의 블럭을 지움  
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
-                }
-            }
-        }
         blockRotation = (blockRotation + 1) % 4; //회전값을 1증가시킴(3에서 4가 되는 경우는 0으로 되돌림) 
-        for (int i = 0; i < 4; i++) 
-        { //회전된 블록을 찍음 
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j] = eBlockStatus::ACTIVE_BLOCK;
-                }
-            }
-        }
+        setActiveBlock(0, 0);
         break;
 
     case eDir::ROTATABLE_CRASH: //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
               //이를 동작시키는 특수동작 
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++) 
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
-                }
-            }
-        }
         blockRotation = (blockRotation + 1) % 4;
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                if (BLOCKS[blockType][blockRotation][i][j] == 1)
-                {
-                    main_org[blockY + i - 1][blockX + j] = eBlockStatus::ACTIVE_BLOCK;
-                }
-            }
-        }
+        setActiveBlock(-1, 0);
         blockY--;
         break;
     }
@@ -870,7 +788,7 @@ void checkGameOver(void) {
                 getch();
             }
             key = getch();
-            reset();
+            resetBoard();
         }
     }
 }
@@ -914,3 +832,32 @@ void pauseGame(void) { //게임 일시정지 함수
         }
     }
 } //끝! 
+
+void eraseBlock()
+{
+    for (int i = 0; i < 4; i++)
+    { //현재좌표의 블럭을 지움 
+        for (int j = 0; j < 4; j++)
+        {
+            if (BLOCKS[blockType][blockRotation][i][j] == 1)
+            {
+                main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
+            }
+        }
+    }
+}
+
+
+void setActiveBlock(int X, int Y)
+{
+    for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if (BLOCKS[blockType][blockRotation][i][j] == 1)
+                {
+                    main_org[blockY + i + X][blockX + j + Y] = eBlockStatus::ACTIVE_BLOCK;
+                }
+            }
+        }
+}
