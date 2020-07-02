@@ -19,9 +19,10 @@
     } \
 //    ASSERT(false, "error!!!");
 
+//키보드값들 
 enum class eDir:int
 {
-    LEFT =  75 , //좌로 이동    //키보드값들 
+    LEFT =  75 , //좌로 이동    
     RIGHT =  77 , //우로 이동 
     UP =  72 , //회전 
     DOWN =  80 , //soft drop
@@ -43,13 +44,6 @@ enum class eBlockStatus:int
     NON_BLCOK = 100 // for copy
     
 };
-
-constexpr int MAIN_X =  11 ; //게임판 가로크기 
-constexpr int MAIN_Y =  23 ; //게임판 세로크기 
-
-constexpr int MAIN_X_ADJ =  3  ;//게임판 위치조정 
-constexpr int MAIN_Y_ADJ =  1  ;//게임판 위치조정 
-constexpr int STATUS_X_ADJ = MAIN_X_ADJ + MAIN_X + 1;//게임정보표시 위치조정 
 
 constexpr int BLOCKS[7][4][4][4] = {
 {{0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0},{0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0},
@@ -76,6 +70,13 @@ enum class eCursorType
 };
 
 
+constexpr int MAIN_X =  11 ; //게임판 가로크기 
+constexpr int MAIN_Y =  23 ; //게임판 세로크기 
+
+constexpr int MAIN_X_ADJ =  3  ;//게임판 위치조정 
+constexpr int MAIN_Y_ADJ =  1  ;//게임판 위치조정 
+constexpr int STATUS_X_ADJ = MAIN_X_ADJ + MAIN_X + 1;//게임정보표시 위치조정 
+
 int blockType; //블록 종류를 저장 
 int blockRotation; //블록 회전값 저장 
 int blockTypeNext; //다음 블록값 저장 
@@ -87,9 +88,10 @@ int blockTypeNext; //다음 블록값 저장
 eBlockStatus main_org[MAIN_Y][MAIN_X];
 eBlockStatus main_cpy[MAIN_Y][MAIN_X];
 
-int STATUS_Y_GOAL; //GOAL 정보표시위치 Y 좌표 저장 
-int STATUS_Y_LEVEL; //LEVEL 정보표시위치 Y 좌표 저장
-int STATUS_Y_SCORE; //SCORE 정보표시위치 Y 좌표 저장
+constexpr int STATUS_Y = 3;
+constexpr int STATUS_Y_GOAL = STATUS_Y; //GOAL 정보표시위치 Y 좌표 저장 
+constexpr int STATUS_Y_LEVEL = STATUS_Y+1; //LEVEL 정보표시위치 Y 좌표 저장
+constexpr int STATUS_Y_SCORE = STATUS_Y + 9; //SCORE 정보표시위치 Y 좌표 저장
 
 int blockX;
 int blockY; //이동중인 블록의 게임판상의 x,y좌표를 저장 
@@ -102,6 +104,7 @@ present score
 last score
 bestscore
 */
+
 int key; //키보드로 입력받은 키값을 저장 
 int presentLevel; //현재 presentLevel 
 int presentScore; //현재 점수 
@@ -121,8 +124,8 @@ void drawTitle(void); //게임시작화면
 void resetBoard(void); //게임판 초기화 
 void initialMainOrg(void); //메인 게임판(main_org[][]를 초기화)
 void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
-void drawMap(void); //게임 전체 인터페이스를 표시 
-void drawMain(void); //게임판을 그림 
+void drawInfoBoard(void); //게임 전체 인터페이스를 표시 
+void drawGameBoard(void); //게임판을 그림 
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
 void checkKey(void); //키보드로 키를 입력받음 
 void dropBlock(void); //블록을 아래로 떨어트림 
@@ -135,12 +138,11 @@ void pauseGame(void);//게임을 일시정지시킴
 void eraseBlock();
 
 void setActiveBlock(int X, int Y);
+void setCursorType(eCursorType c);
+void gotoxy(int x, int y) ;
 
 
-void gotoxy(int x, int y) { //gotoxy함수 
-    COORD pos = { 2 * (short)x,(short)y };
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-}
+
 
 int getRandom(const int min, const int max)
 {
@@ -153,29 +155,6 @@ int getRandom(const int min, const int max)
     return range(rnd);
 }
 
-
-void setCursorType(eCursorType c) {
-    CONSOLE_CURSOR_INFO curInfo;
-    switch (c) 
-    {
-        case eCursorType::NO_CURSOR:
-            curInfo.dwSize = 1;
-            curInfo.bVisible = FALSE;
-            break;
-        case eCursorType::SOLID_CURSOR:
-            curInfo.dwSize = 100;
-            curInfo.bVisible = TRUE;
-            break;
-        case eCursorType::NOMAL_CURSOR:
-            curInfo.dwSize = 20;
-            curInfo.bVisible = TRUE;
-            break;
-        default:
-            ASSERT(false,"eCursorType input error");
-            break;
-    }
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &curInfo);
-}
 
 int main() {
     static_assert(sizeof(main_org) == 23*11*sizeof(eBlockStatus), "error");
@@ -191,7 +170,7 @@ int main() {
         { 
             //블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
             checkKey(); //키입력확인 
-            drawMain();
+            drawGameBoard();
             Sleep(blockDownDelay);
             
             if (bCrash && isCrash(blockX, blockY + 1, blockRotation))
@@ -298,8 +277,8 @@ void resetBoard(void) {
     system("cls"); //화면지움 
     initialMainOrg(); // main_org를 초기화 
     initialMainCpy();
-    drawMap(); // 게임화면을 그림
-    drawMain(); // 게임판을 그림 
+    drawInfoBoard(); // 게임화면을 그림
+    drawGameBoard(); // 게임판을 그림 
 
     blockTypeNext = rand() % 7; //다음번에 나올 블록 종류를 랜덤하게 생성 
     makeNewBlock(); //새로운 블록을 하나 만듦  
@@ -335,31 +314,31 @@ void initialMainCpy(void) {
     }
 }
 
-void drawMap(void) 
+void drawInfoBoard(void) 
 { //게임 상태 표시를 나타내는 함수  
-    int y = 3;// presentLevel, goal, score만 게임중에 값이 바뀔수 도 있음 그 y값을 따로 저장해둠 
+// presentLevel, goal, score만 게임중에 값이 바뀔수 도 있음 그 y값을 따로 저장해둠 
  // 그래서 혹시 게임 상태 표시 위치가 바뀌어도 그 함수에서 안바꿔도 되게.. 
-    gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL = y); printf(" LEVEL : %5d", presentLevel);
-    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL = y + 1); printf(" GOAL  : %5d", 10 - deletedLineCount);
-    gotoxy(STATUS_X_ADJ, y + 2); printf("+-  N E X T  -+ ");
-    gotoxy(STATUS_X_ADJ, y + 3); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, y + 4); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, y + 5); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, y + 6); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, y + 7); printf("+-- -  -  - --+ ");
-    gotoxy(STATUS_X_ADJ, y + 8); printf(" YOUR SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE = y + 9); printf("        %6d", presentScore);
-    gotoxy(STATUS_X_ADJ, y + 10); printf(" LAST SCORE :");
-    gotoxy(STATUS_X_ADJ, y + 11); printf("        %6d", lastScore);
-    gotoxy(STATUS_X_ADJ, y + 12); printf(" BEST SCORE :");
-    gotoxy(STATUS_X_ADJ, y + 13); printf("        %6d", bestScore);
-    gotoxy(STATUS_X_ADJ, y + 15); printf("  △   : Shift        SPACE : Hard Drop");
-    gotoxy(STATUS_X_ADJ, y + 16); printf("◁  ▷ : Left / Right   P   : Pause");
-    gotoxy(STATUS_X_ADJ, y + 17); printf("  ▽   : Soft Drop     ESC  : Quit");
-    gotoxy(STATUS_X_ADJ, y + 20); printf("blog.naver.com/azure0777");
+    gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel);
+    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount);
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 2); printf("+-  N E X T  -+ ");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 3); printf("|             | ");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 4); printf("|             | ");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 5); printf("|             | ");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 6); printf("|             | ");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 7); printf("+-- -  -  - --+ ");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 8); printf(" YOUR SCORE :");
+    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore);
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 10); printf(" LAST SCORE :");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 11); printf("        %6d", lastScore);
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 12); printf(" BEST SCORE :");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 13); printf("        %6d", bestScore);
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 15); printf("  △   : Shift        SPACE : Hard Drop");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 16); printf("◁  ▷ : Left / Right   P   : Pause");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 17); printf("  ▽   : Soft Drop     ESC  : Quit");
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 20); printf("blog.naver.com/azure0777");
 }
 
-void drawMain(void) 
+void drawGameBoard(void) 
 { //게임판 그리는 함수 
     for (int j = 1; j < MAIN_X - 1; j++) 
     { //천장은 계속 새로운블럭이 지나가서 지워지면 새로 그려줌 
@@ -400,7 +379,6 @@ void drawMain(void)
             }
         }
     }
-
     memcpy(main_cpy, main_org, sizeof(main_org));
 }
 
@@ -444,10 +422,10 @@ void makeNewBlock(void)
 
 void checkKey(void) 
 {
-    int key = 0; //키값 초기화  
+    int key = 0;
 
     if (kbhit()) 
-    { //키입력이 있는 경우  
+    {
         key = getch(); //키값을 받음
         eDir dir = static_cast<eDir>(key);
         if (key == 224) 
@@ -460,25 +438,25 @@ void checkKey(void)
             dir = static_cast<eDir>(key);
             switch (dir)
             {
-            case eDir::LEFT: //왼쪽키 눌렀을때
+            case eDir::LEFT:
                 if (!isCrash(blockX - 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eDir::RIGHT: //오른쪽 방향키 눌렀을때- 위와 동일하게 처리됨 
+            case eDir::RIGHT:
                 if (!isCrash(blockX + 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eDir::DOWN: //아래쪽 방향키 눌렀을때-위와 동일하게 처리됨 
+            case eDir::DOWN:
                 if (!isCrash(blockX, blockY + 1, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eDir::UP: //위쪽 방향키 눌렀을때 
+            case eDir::UP:
                 if (!isCrash(blockX, blockY, (blockRotation + 1) % 4))
                 {
                     moveBlock(dir);
@@ -508,6 +486,7 @@ void checkKey(void)
                 }
                 break;
             case eDir::P: //P(대문자) 눌렀을때 
+                FALLTHROUGH
             case eDir::p: //p(소문자) 눌렀을때 
                 pauseGame(); //일시정지 
                 break;
@@ -525,11 +504,12 @@ void checkKey(void)
 
 void dropBlock(void) 
 {
-if (bCrash && !isCrash(blockX, blockY + 1, blockRotation))
+    if (bCrash && !isCrash(blockX, blockY + 1, blockRotation))
     {
         bCrash = false; //밑이 비어있으면 crush flag 끔 
     }
-    if (bCrash && isCrash(blockX, blockY + 1, blockRotation)) { //밑이 비어있지않고 crush flag가 켜저있으면 
+    if (bCrash && isCrash(blockX, blockY + 1, blockRotation)) 
+    { //밑이 비어있지않고 crush flag가 켜저있으면 
         for (int i = 0; i < MAIN_Y; i++) 
         { //현재 조작중인 블럭을 굳힘 
             for (int j = 0; j < MAIN_X; j++) 
@@ -543,7 +523,7 @@ if (bCrash && !isCrash(blockX, blockY + 1, blockRotation))
         bCrash = false;
         checkLine(); 
         bNeedNewBlock = true; 
-        return; //함수 종료 
+        return;
     }
 
     if (!isCrash(blockX, blockY + 1, blockRotation))
@@ -569,24 +549,24 @@ bool isCrash(int blockX, int blockY, int blockRotation)
         }
     }
     return false; //하나도 안겹치면 true리턴 
-};
+}
 
 void moveBlock(eDir dir) 
 { //블록을 이동시킴 
     eraseBlock();
     switch (dir) 
     {
-    case eDir::LEFT: //왼쪽방향 
+    case eDir::LEFT: 
         setActiveBlock(0, -1);
         blockX--; //좌표값 이동 
         break;
 
-    case eDir::RIGHT:    //오른쪽 방향. 왼쪽방향이랑 같은 원리로 동작 
+    case eDir::RIGHT:   
         setActiveBlock(0, 1);
         blockX++;
         break;
 
-    case eDir::DOWN:    //아래쪽 방향. 왼쪽방향이랑 같은 원리로 동작
+    case eDir::DOWN: 
         setActiveBlock(1, 0);
         blockY++;
         break;
@@ -670,7 +650,7 @@ void checkLevelUp(void)
 {
     if (deletedLineCount >= 10) 
     { //레벨별로 10줄씩 없애야함. 10줄이상 없앤 경우 
-        drawMain();
+        drawGameBoard();
         bLevelUp = true; //레벨업 flag를 띄움 
         presentLevel += 1; //레벨을 1 올림 
         deletedLineCount = 0; //지운 줄수 초기화   
@@ -705,7 +685,7 @@ void checkLevelUp(void)
         checkLine(); //블록으로 모두 채운것 지우기
 //.checkLine()함수 내부에서 presentLevel up flag가 켜져있는 경우 점수는 없음.         
         switch (presentLevel) 
-        { //레벨별로 속도를 조절해줌. 
+        {
             case 2:
                 blockDownDelay = 50;
                 break;
@@ -737,15 +717,16 @@ void checkLevelUp(void)
                 ASSERT(false, "고려하지않은 레벨");
                 break;
         }
-        bLevelUp = false; //레벨업 flag꺼줌
+        bLevelUp = false;
 
-        gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel); //레벨표시 
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount); // 레벨목표 표시 
+        gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel);
+        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount);
 
     }
 }
 
-void checkGameOver(void) {
+void checkGameOver(void) 
+{
     const int x = 5;
     const int y = 5;
 
@@ -753,7 +734,7 @@ void checkGameOver(void) {
     {
         if (static_cast<int>(main_org[3][i]) > 0) 
         { //천장(위에서 세번째 줄)에 inactive가 생성되면 게임 오버 
-            gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤"); //게임오버 메세지 
+            gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
             gotoxy(x, y + 1); printf("▤                              ▤");
             gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
             gotoxy(x, y + 3); printf("▤  |  G A M E  O V E R..   |   ▤");
@@ -763,11 +744,11 @@ void checkGameOver(void) {
             gotoxy(x, y + 7); printf("▤  Press any key to restart..  ▤");
             gotoxy(x, y + 8); printf("▤                              ▤");
             gotoxy(x, y + 9); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
-            lastScore = presentScore; //게임점수를 옮김 
+            lastScore = presentScore;
 
             if (presentScore > bestScore) 
             { //최고기록 갱신시 
-                FILE* file = fopen("score.dat", "wt"); //presentScore.dat에 점수 저장
+                FILE* file = fopen("score.dat", "wt");
 
                 gotoxy(x, y + 6); printf("▤  ★★★ BEST SCORE! ★★★   ▤  ");
 
@@ -793,7 +774,8 @@ void checkGameOver(void) {
     }
 }
 
-void pauseGame(void) { //게임 일시정지 함수 
+void pauseGame(void) 
+{
     const int x = 5;
     const int y = 5;
 
@@ -812,8 +794,8 @@ void pauseGame(void) { //게임 일시정지 함수
 
     system("cls"); //화면 지우고 새로 그림 
     initialMainCpy();
-    drawMain();
-    drawMap();
+    drawGameBoard();
+    drawInfoBoard();
 
     for (int i = 1; i < 3; i++) 
     { // 다음블록 그림 
@@ -831,12 +813,13 @@ void pauseGame(void) { //게임 일시정지 함수
             }
         }
     }
-} //끝! 
+}
 
+//현재좌표의 블럭을 지움 
 void eraseBlock()
 {
     for (int i = 0; i < 4; i++)
-    { //현재좌표의 블럭을 지움 
+    { 
         for (int j = 0; j < 4; j++)
         {
             if (BLOCKS[blockType][blockRotation][i][j] == 1)
@@ -860,4 +843,34 @@ void setActiveBlock(int X, int Y)
                 }
             }
         }
+}
+
+void setCursorType(eCursorType c)
+{
+    CONSOLE_CURSOR_INFO curInfo;
+    switch (c)
+    {
+    case eCursorType::NO_CURSOR:
+        curInfo.dwSize = 1;
+        curInfo.bVisible = FALSE;
+        break;
+    case eCursorType::SOLID_CURSOR:
+        curInfo.dwSize = 100;
+        curInfo.bVisible = TRUE;
+        break;
+    case eCursorType::NOMAL_CURSOR:
+        curInfo.dwSize = 20;
+        curInfo.bVisible = TRUE;
+        break;
+    default:
+        ASSERT(false, "eCursorType input error");
+        break;
+    }
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &curInfo);
+}
+
+void gotoxy(int x, int y)
+{ //gotoxy함수 
+    COORD pos = { 2 * (short)x,(short)y };
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
