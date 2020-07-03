@@ -119,7 +119,7 @@ int deletedLineCount; //현재 레벨에서 제거한 줄 수를 저장
 int blockDownDelay; // 블록 내려오는 딜레이
 
 bool bNeedNewBlock = false; //새로운 블럭이 필요함을 알리는 flag 
-bool bCrash = false; //현재 이동중인 블록이 충돌상태인지 알려주는 flag 
+bool bBlockFloorCrash = false; //현재 블록이 바닥에 닿았는지 체크
 bool bLevelUp = false; //다음레벨로 진행(현재 레벨목표가 완료되었음을) 알리는 flag 
 
 void drawTitle(void); //게임시작화면 
@@ -129,7 +129,7 @@ void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
 void drawInfoBoard(void); //게임 전체 인터페이스를 표시 
 void drawGameBoard(void); //게임판을 그림 
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
-eKeyInput checkKey(void); //키보드로 키를 입력받음 
+eKeyInput inputKeyMoveBlock(void); //키보드로 키를 입력받음 
 void dropBlock(void); //블록을 아래로 떨어트림 
 bool isCrash(int blockX, int blockY, int rotation); //blockX, by위치에 rotation회전값을 같는 경우 충돌 판단 
 void moveBlock(eKeyInput dir); //dir방향으로 블록을 움직임 
@@ -145,16 +145,7 @@ void setActiveBlock(int X, int Y);
 void setCursorType(eCursorType c);
 void gotoxy(int x, int y);
 
-int getRandom(const int min, const int max)
-{
-    static std::random_device      rn;
-    static int                     seed = rn();
-    static std::mt19937            rnd(seed);
-
-    std::uniform_int_distribution<int> range(min, max);
-
-    return range(rnd);
-}
+int getRandom(const int min, const int max);
 
 int main()
 {
@@ -165,32 +156,30 @@ int main()
 
     drawTitle(); //키보드 누를때까지 여기서 대기
 
+    //시작시, 사망후 재시작시 무조건 실행하는 세줄
     initialBoard(); //게임판 리셋 
     drawInfoBoard(); // 정보화면을 그림
-    blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
     makeNewBlock(); //새로운 블록을 하나 만듦  
 
     while (1)
     {
-        //블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
         for (int i = 0; i < 5; i++)
-        {
-            eKeyInput keyInput = checkKey(); //키입력확인 
+        {//블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
+            eKeyInput keyInput = inputKeyMoveBlock(); //키입력확인 and move
             drawGameBoard();
-            Sleep(blockDownDelay);
-
-            //블록이 충돌중인경우 추가로 이동및 회전할 시간을 갖음 
-            if (bCrash && isCrash(blockX, blockY + 1, blockRotation))
-            {
-                Sleep(100);
-            }
-
             if (keyInput == eKeyInput::SPACE)
             { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
                 break;
             }
+            
+            Sleep(blockDownDelay);
+            //블록이 충돌중인경우 추가로 이동및 회전할 시간을 갖음 
+            if (bBlockFloorCrash && isCrash(blockX, blockY + 1, blockRotation))
+            {
+                Sleep(100);
+            }
         }
-
+        //moveBlock(eKeyInput::DOWN);
         dropBlock(); // 블록을 한칸 내림 
         checkLevelUp(); // 레벨업을 체크 
         checkGameOver(); //게임오버를 체크 
@@ -272,7 +261,8 @@ void initialBoard(void) {
     key = 0;
     deletedLineCount = 0;
     blockDownDelay = 100;
-    bCrash = false;
+    bBlockFloorCrash = false;
+    blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
 
     system("cls"); //화면지움 
     initialMainOrg(); // main_org를 초기화 
@@ -383,7 +373,7 @@ void makeNewBlock(void)
     blockX = (MAIN_X / 2) - 1; //블록 생성 위치x좌표(게임판의 가운데) 
     blockY = 0;  //블록 생성위치 y좌표(제일 위) 
     blockType = blockTypeNext; //다음블럭값을 가져옴 
-    blockTypeNext = getRandom(0, 6);  //다음 블럭을 만듦 
+    blockTypeNext = getRandom(0, 6);
     blockRotation = 0;  //회전은 0번으로 가져옴 
 
     bNeedNewBlock = false; //makeNewBlock flag를 끔  
@@ -409,47 +399,47 @@ void makeNewBlock(void)
     }
 }
 
-eKeyInput checkKey(void)
+eKeyInput inputKeyMoveBlock(void)
 {
     int key = 0;
-    eKeyInput dir = eKeyInput::NON;
+    eKeyInput inputKey = eKeyInput::NON;
 
     if (kbhit())
     {
         key = getch(); //키값을 받음
-        dir = static_cast<eKeyInput>(key);
+        inputKey = static_cast<eKeyInput>(key);
         //방향키인경우 
         if (key == 224)
         {
             key = getch();
-            dir = static_cast<eKeyInput>(key);
-            switch (dir)
+            inputKey = static_cast<eKeyInput>(key);
+            switch (inputKey)
             {
             case eKeyInput::LEFT:
                 if (!isCrash(blockX - 1, blockY, blockRotation))
                 {
-                    moveBlock(dir);
+                    moveBlock(inputKey);
                 }
                 break;
             case eKeyInput::RIGHT:
                 if (!isCrash(blockX + 1, blockY, blockRotation))
                 {
-                    moveBlock(dir);
+                    moveBlock(inputKey);
                 }
                 break;
             case eKeyInput::DOWN:
                 if (!isCrash(blockX, blockY + 1, blockRotation))
                 {
-                    moveBlock(dir);
+                    moveBlock(inputKey);
                 }
                 break;
             case eKeyInput::UP:
                 if (!isCrash(blockX, blockY, (blockRotation + 1) % 4))
                 {
-                    moveBlock(dir);
+                    moveBlock(inputKey);
                 }
                 //회전할 수 있는지 체크 후 가능하면 회전
-                else if (bCrash && !isCrash(blockX, blockY - 1, (blockRotation + 1) % 4))
+                else if (bBlockFloorCrash && !isCrash(blockX, blockY - 1, (blockRotation + 1) % 4))
                 {
                     //바닥에 닿은 경우 위쪽으로 한칸띄워서 회전이 가능하면 그렇게 함(특수동작)
                     moveBlock(eKeyInput::ROTATABLE_CRASH);
@@ -460,11 +450,11 @@ eKeyInput checkKey(void)
         }
         else
         { //방향키가 아닌경우 
-            switch (dir)
+            switch (inputKey)
             {
             case eKeyInput::SPACE: //스페이스키 눌렀을때 
 
-                while (!bCrash)
+                while (!bBlockFloorCrash)
                 { //바닥에 닿을때까지 이동시킴 
                     dropBlock();
                     presentScore += presentLevel; // hard drop 보너스
@@ -489,14 +479,13 @@ eKeyInput checkKey(void)
         }
     }
     clearBuffer();
-    return dir;
+    return inputKey;
 }
 
 void dropBlock(void)
 {
     bool bIsCrash = isCrash(blockX, blockY + 1, blockRotation);
-
-    if (bCrash && bIsCrash) // 11
+    if (bBlockFloorCrash && bIsCrash) // 11
     { //밑이 비어있지않고 crush flag가 켜저있으면 
         for (int i = 0; i < MAIN_Y; i++)
         { //현재 조작중인 블럭을 굳힘 
@@ -508,7 +497,7 @@ void dropBlock(void)
                 }
             }
         }
-        bCrash = false;
+        bBlockFloorCrash = false;
         checkLine();
         bNeedNewBlock = true;
         return;
@@ -521,7 +510,7 @@ void dropBlock(void)
     }
     else // 0 1/0
     {
-        bCrash = true; //밑으로 이동이 안되면  crush flag를 켬
+        bBlockFloorCrash = true; //밑으로 이동이 안되면  crush flag를 켬
     }
 }
 
@@ -590,7 +579,7 @@ void checkLine(void)
         }
         if (lineBlockNum == MAIN_X - 2)
         { //블록이 가득 찬 경우 
-            if (bLevelUp == 0)
+            if (!bLevelUp)
             { //레벨업상태가 아닌 경우에(레벨업이 되면 자동 줄삭제가 있음) 
                 presentScore += 100 * presentLevel; //점수추가 
                 deletedLineCount++; //지운 줄 갯수 카운트 증가 
@@ -661,7 +650,7 @@ void checkLevelUp(void)
             Sleep(200);
         }
         initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
-//(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
+        //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
 
         for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (presentLevel - 1); i--)
         { //레벨업보상으로 각 레벨-1의 수만큼 아랫쪽 줄을 지워줌 
@@ -674,7 +663,7 @@ void checkLevelUp(void)
         }
         Sleep(100); //별찍은거 보여주기 위해 delay 
         checkLine(); //블록으로 모두 채운것 지우기
-//.checkLine()함수 내부에서 presentLevel up flag가 켜져있는 경우 점수는 없음.         
+        //.checkLine()함수 내부에서 presentLevel up flag가 켜져있는 경우 점수는 없음.         
         switch (presentLevel)
         {
         case 2:
@@ -709,6 +698,7 @@ void checkLevelUp(void)
             // CASE 10을 유지
             break;
         }
+
         bLevelUp = false;
 
         gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel);
@@ -765,8 +755,6 @@ void checkGameOver(void)
             initialBoard();
             drawInfoBoard();
             drawGameBoard();
-            blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
-            makeNewBlock(); //새로운 블록을 하나 만듦  
         }
     }
 }
@@ -879,4 +867,15 @@ void clearBuffer()
     {
         getch();
     }
+}
+
+int getRandom(const int min, const int max)
+{
+    static std::random_device      rn;
+    static int                     seed = rn();
+    static std::mt19937            rnd(seed);
+
+    std::uniform_int_distribution<int> range(min, max);
+
+    return range(rnd);
 }
