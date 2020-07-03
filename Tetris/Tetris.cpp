@@ -21,7 +21,6 @@
 
 const char GAP[] = "  ";
 
-//키보드값들 
 enum class eKeyInput
 {
     NON,
@@ -34,7 +33,7 @@ enum class eKeyInput
     P = 80, //일시정지
     ESC = 27, //게임종료 
     ROTATABLE_CRASH
-    //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
+    //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우
 };
 
 enum class eBlockStatus
@@ -149,6 +148,7 @@ void setCursorType(eCursorType c);
 void gotoxy(int x, int y);
 
 int getRandom(const int min, const int max);
+void drawUpdateInfo();
 
 int main()
 {
@@ -160,6 +160,7 @@ int main()
     initialBoard(); //게임판 리셋 
     drawInfoBoard(); // 정보화면을 그림
     makeNewBlock(); //새로운 블록을 하나 만듦  
+    drawUpdateInfo();
 
     while (1)
     {
@@ -179,12 +180,15 @@ int main()
                 Sleep(100);
             }
         }
+
         dropBlock(); // 블록을 한칸 내림 
         checkLevelUp(); // 레벨업을 체크 
         checkGameOver(); //게임오버를 체크 
+
         if (bNeedNewBlock)
         {
             makeNewBlock(); // 뉴 블럭 flag가 있는 경우 새로운 블럭 생성 
+            drawUpdateInfo();
         }
     }
 }
@@ -243,7 +247,7 @@ void drawTitle(void) {
 
 void initialBoard(void) {
 
-    FILE* file = fopen("score.dat", "rt"); // presentScore.dat파일을 연결 
+    FILE* file = fopen("score.dat", "rt"); // Score.dat파일을 연결 
     if (file == NULL)
     {
         bestScore = 0;
@@ -377,11 +381,16 @@ void makeNewBlock(void)
 
     bNeedNewBlock = false; //makeNewBlock flag를 끔  
 
-    //게임판 blockX, by위치에 블럭생성  
+    //게임판 blockX, blocky위치에 블럭생성  
     setActiveBlock(0, 0);
+}
 
+void drawUpdateInfo() 
+{
+    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore); //점수 표시  
+    //게임상태표시에 다음에 나올블럭을 그림 
     for (int i = 1; i < 3; i++)
-    { //게임상태표시에 다음에 나올블럭을 그림 
+    {
         for (int j = 0; j < 4; j++)
         {
             if (BLOCKS[blockTypeNext][0][i][j] == 1)
@@ -457,7 +466,7 @@ eKeyInput inputKeyMoveBlock(void)
                 { //바닥에 닿을때까지 이동시킴 
                     dropBlock();
                     presentScore += presentLevel; // hard drop 보너스
-                    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore); //점수 표시  
+
                 }
                 break;
             case eKeyInput::P: //P(대문자) 눌렀을때 
@@ -617,9 +626,7 @@ void checkLine(void)
             initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
         //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
         }
-
         gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (deletedLineCount <= 10) ? 10 - deletedLineCount : 0);
-        gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore);
     }
 }
 
@@ -798,6 +805,18 @@ void pauseGame(void)
     }
 }
 
+
+int getRandom(const int min, const int max)
+{
+    static std::random_device      rn;
+    static int                     seed = rn();
+    static std::mt19937            rnd(seed);
+
+    std::uniform_int_distribution<int> range(min, max);
+
+    return range(rnd);
+}
+
 //현재좌표의 블럭을 지움 
 void setEraseBlock()
 {
@@ -827,6 +846,7 @@ void setActiveBlock(int X, int Y)
     }
 }
 
+//only windows
 void setCursorType(eCursorType c)
 {
     CONSOLE_CURSOR_INFO curInfo;
@@ -864,15 +884,4 @@ void clearBuffer()
     {
         getch();
     }
-}
-
-int getRandom(const int min, const int max)
-{
-    static std::random_device      rn;
-    static int                     seed = rn();
-    static std::mt19937            rnd(seed);
-
-    std::uniform_int_distribution<int> range(min, max);
-
-    return range(rnd);
 }
