@@ -494,12 +494,9 @@ eKeyInput checkKey(void)
 
 void dropBlock(void)
 {
-    if (bCrash && !isCrash(blockX, blockY + 1, blockRotation))
-    {
-        bCrash = false; //밑이 비어있으면 crush flag 끔 
-    }
+    bool bIsCrash = isCrash(blockX, blockY + 1, blockRotation);
 
-    if (bCrash && isCrash(blockX, blockY + 1, blockRotation))
+    if (bCrash && bIsCrash) // 11
     { //밑이 비어있지않고 crush flag가 켜저있으면 
         for (int i = 0; i < MAIN_Y; i++)
         { //현재 조작중인 블럭을 굳힘 
@@ -518,11 +515,11 @@ void dropBlock(void)
     }
 
 
-    if (!isCrash(blockX, blockY + 1, blockRotation))
+    if (!bIsCrash) //  0 1/0
     {
         moveBlock(eKeyInput::DOWN); //밑이 비어있으면 밑으로 한칸 이동 
     }
-    else
+    else // 0 1/0
     {
         bCrash = true; //밑으로 이동이 안되면  crush flag를 켬
     }
