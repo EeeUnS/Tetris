@@ -1,6 +1,4 @@
-﻿#include<windows.h>
-#include<conio.h>
-#include <mmsystem.h>
+﻿#include"consolCommon.h"
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -9,10 +7,6 @@
 #include<random>
 
 
-//#include"consolCommon.h"
-
-#pragma comment(lib, "winmm.lib")
-#pragma warning(disable:4996)
 #define FALLTHROUGH
 
 
@@ -50,12 +44,6 @@ enum class eBlockStatus
     NON_BLOCK  // for copy GAMEBLOARD에는 존재하면안됨
 };
 
-enum class eCursorType
-{
-    NO_CURSOR,
-    SOLID_CURSOR,
-    NOMAL_CURSOR
-};
 
 struct Info
 {
@@ -143,10 +131,6 @@ void setEraseBlock();
 void clearBuffer();
 
 void setActiveBlock(int X, int Y);
-//for windows
-void setCursorType(eCursorType c);
-void gotoxy(int x, int y);
-
 int getRandom(const int min, const int max);
 
 int main()
@@ -154,7 +138,7 @@ int main()
     static_assert(static_cast<int>(eBlockStatus::EMPTY) == 0, "EMPTY is not 0");
     static_assert(sizeof(gameBoard) == 23 * 11 * sizeof(eBlockStatus), "error");
     Info info;
-    setCursorType(eCursorType::NO_CURSOR);
+    consolCommon::setCursorType(eCursorType::NO_CURSOR);
     drawTitle(); 
     
     //시작시, 사망후 재시작시 무조건 실행하는 네줄
@@ -174,11 +158,11 @@ int main()
                 break;
             }
             
-            Sleep(blockDownDelay);
+            consolCommon::__sleep(blockDownDelay);
             //블록이 충돌중인경우 추가로 이동및 회전할 시간을 갖음 
             if (bBlockFloorCrash && isCrash(blockX, blockY + 1, blockRotation))
             {
-                Sleep(100);
+                consolCommon::__sleep(100);
             }
         }
 
@@ -198,50 +182,50 @@ void drawTitle(void) {
     const int x = 5; //타이틀화면이 표시되는 x좌표 
     const int y = 4; //타이틀화면이 표시되는 y좌표 
 
-    gotoxy(x, y + 0); printf("■□□□■■■□□■■□□■■"); Sleep(100);
-    gotoxy(x, y + 1); printf("■■■□  ■□□    ■■□□■"); Sleep(100);
-    gotoxy(x, y + 2); printf("□□□■              □■  ■"); Sleep(100);
-    gotoxy(x, y + 3); printf("■■□■■  □  ■  □□■□□"); Sleep(100);
-    gotoxy(x, y + 4); printf("■■  ■□□□■■■□■■□□"); Sleep(100);
-    gotoxy(x, y + 5); printf("      blog.naver.com/azure0777"); Sleep(100);
-    gotoxy(x + 5, y + 2); printf("T E T R I S"); Sleep(100);
-    gotoxy(x, y + 7); printf("Please Enter Any Key to Start..");
-    gotoxy(x, y + 9); printf("  △   : Shift");
-    gotoxy(x, y + 10); printf("◁  ▷ : Left / Right");
-    gotoxy(x, y + 11); printf("  ▽   : Soft Drop");
-    gotoxy(x, y + 12); printf(" SPACE : Hard Drop");
-    gotoxy(x, y + 13); printf("   P   : Pause");
-    gotoxy(x, y + 14); printf("  ESC  : Quit");
-    gotoxy(x, y + 16); printf("BONUS FOR HARD DROPS / COMBOS");
+    consolCommon::gotoxy(x, y + 0); printf("■□□□■■■□□■■□□■■"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x, y + 1); printf("■■■□  ■□□    ■■□□■"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x, y + 2); printf("□□□■              □■  ■"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x, y + 3); printf("■■□■■  □  ■  □□■□□"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x, y + 4); printf("■■  ■□□□■■■□■■□□"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x, y + 5); printf("      blog.naver.com/azure0777"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x + 5, y + 2); printf("T E T R I S"); consolCommon::__sleep(100);
+    consolCommon::gotoxy(x, y + 7); printf("Please Enter Any Key to Start..");
+    consolCommon::gotoxy(x, y + 9); printf("  △   : Shift");
+    consolCommon::gotoxy(x, y + 10); printf("◁  ▷ : Left / Right");
+    consolCommon::gotoxy(x, y + 11); printf("  ▽   : Soft Drop");
+    consolCommon::gotoxy(x, y + 12); printf(" SPACE : Hard Drop");
+    consolCommon::gotoxy(x, y + 13); printf("   P   : Pause");
+    consolCommon::gotoxy(x, y + 14); printf("  ESC  : Quit");
+    consolCommon::gotoxy(x, y + 16); printf("BONUS FOR HARD DROPS / COMBOS");
 
     //타이틀 프레임을 세는 변수  
     for (int i = 0; 1; i++)
     {   //하나도 안중요한 별 반짝이는 애니메이션효과 
-        if (kbhit())
+        if (consolCommon::__kbhit())
         {
             break;
         }
         else if (i % 200 == 0)
         {
-            gotoxy(x + 4, y + 1);
+            consolCommon::gotoxy(x + 4, y + 1);
             printf("★");
         }//cnt가 200으로 나누어 떨어질때 별을 표시 
         else if ((i % 200 - 100) == 0)
         {
-            gotoxy(x + 4, y + 1);
+            consolCommon::gotoxy(x + 4, y + 1);
             printf(GAP);
         } //위 카운트에서 100카운트 간격으로 별을 지움 
         else if ((i % 350) == 0)
         {
-            gotoxy(x + 13, y + 2);
+            consolCommon::gotoxy(x + 13, y + 2);
             printf("☆");
         } //윗별과 같지만 시간차를 뒀음 
         else if ((i % 350 - 100) == 0)
         {
-            gotoxy(x + 13, y + 2);
+            consolCommon::gotoxy(x + 13, y + 2);
             printf(GAP);
         }
-        Sleep(10); // 00.1초 딜레이  
+        consolCommon::__sleep(10); // 00.1초 딜레이  
     }
 
 }
@@ -270,7 +254,7 @@ void initialBoard(Info &info) {
     bBlockFloorCrash = false;
     blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
 
-    system("cls"); //화면지움 
+    consolCommon::clear(); //화면지움 
     initialMainOrg(); // main_org를 초기화 
     initialMainCpy();
 
@@ -313,24 +297,24 @@ void drawInfoBoard(const Info &info)
 { //게임 상태 표시를 나타내는 함수  
 // presentLevel, goal, score만 게임중에 값이 바뀔수 도 있음 그 y값을 따로 저장해둠 
  // 그래서 혹시 게임 상태 표시 위치가 바뀌어도 그 함수에서 안바꿔도 되게.. 
-    gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", info.presentLevel);
-    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - info.deletedLineCount);
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 2); printf("+-  N E X T  -+ ");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 3); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 4); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 5); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 6); printf("|             | ");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 7); printf("+-- -  -  - --+ ");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 8); printf(" YOUR SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", info.presentScore);
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 10); printf(" LAST SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 11); printf("        %6d", info.lastScore);
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 12); printf(" BEST SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 13); printf("        %6d", info.bestScore);
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 15); printf("  △   : Shift        SPACE : Hard Drop");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 16); printf("◁  ▷ : Left / Right   P   : Pause");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 17); printf("  ▽   : Soft Drop     ESC  : Quit");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 20); printf("blog.naver.com/azure0777");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", info.presentLevel);
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - info.deletedLineCount);
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 2); printf("+-  N E X T  -+ ");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 3); printf("|             | ");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 4); printf("|             | ");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 5); printf("|             | ");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 6); printf("|             | ");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 7); printf("+-- -  -  - --+ ");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 8); printf(" YOUR SCORE :");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", info.presentScore);
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 10); printf(" LAST SCORE :");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 11); printf("        %6d", info.lastScore);
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 12); printf(" BEST SCORE :");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 13); printf("        %6d", info.bestScore);
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 15); printf("  △   : Shift        SPACE : Hard Drop");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 16); printf("◁  ▷ : Left / Right   P   : Pause");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 17); printf("  ▽   : Soft Drop     ESC  : Quit");
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y + 20); printf("blog.naver.com/azure0777");
 }
 
 void drawGameBoard(void)
@@ -349,7 +333,7 @@ void drawGameBoard(void)
             if (gameBoardCpy[i][j] != gameBoard[i][j])
             { //cpy랑 비교해서 값이 달라진 부분만 새로 그려줌.
              //이게 없으면 게임판전체를 계속 그려서 느려지고 반짝거림
-                gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i);
+                consolCommon::gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i);
                 switch (gameBoard[i][j])
                 {
                 case eBlockStatus::EMPTY: //빈칸모양 
@@ -393,7 +377,7 @@ void makeNewBlock(void)
 
 void drawUpdateInfoBoard(const Info& info)
 {
-    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", info.presentScore); //점수 표시  
+    consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", info.presentScore); //점수 표시  
     //게임상태표시에 다음에 나올블럭을 그림 
     for (int i = 1; i < 3; i++)
     {
@@ -401,12 +385,12 @@ void drawUpdateInfoBoard(const Info& info)
         {
             if (BLOCKS[blockTypeNext][0][i][j] == 1)
             {
-                gotoxy(STATUS_X_ADJ + 2 + j, i + 6);
+                consolCommon::gotoxy(STATUS_X_ADJ + 2 + j, i + 6);
                 printf("■");
             }
             else
             {
-                gotoxy(STATUS_X_ADJ + 2 + j, i + 6);
+                consolCommon::gotoxy(STATUS_X_ADJ + 2 + j, i + 6);
                 printf(GAP);
             }
         }
@@ -418,14 +402,14 @@ eKeyInput inputKeyMoveBlock(Info &info)
     int key = 0;
     eKeyInput inputKey = eKeyInput::NON;
 
-    if (kbhit())
+    if (consolCommon::__kbhit())
     {
-        key = getch(); //키값을 받음
+        key = consolCommon::__getch(); //키값을 받음
         inputKey = static_cast<eKeyInput>(key);
         //방향키인경우 
         if (key == 224)
         {
-            key = getch();
+            key = consolCommon::__getch();
             inputKey = static_cast<eKeyInput>(key);
             switch (inputKey)
             {
@@ -485,7 +469,7 @@ eKeyInput inputKeyMoveBlock(Info &info)
                 pauseGame(info); //일시정지 
                 break;
             case eKeyInput::ESC: //ESC눌렀을때 
-                system("cls"); //화면을 지우고 
+                consolCommon::clear(); //화면을 지우고 
                 exit(0); //게임종료 
             default:
                 break;
@@ -623,13 +607,13 @@ void checkFullLine(Info &info)
     { //줄 삭제가 있는 경우 점수와 레벨 목표를 새로 표시함  
         if (fullLineCount > 1)
         { //2콤보이상인 경우 경우 보너스및 메세지를 게임판에 띄웠다가 지움 
-            gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 1, MAIN_Y_ADJ + blockY - 2);printf("%d COMBO!", fullLineCount);
-            Sleep(500);
+            consolCommon::gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 1, MAIN_Y_ADJ + blockY - 2);printf("%d COMBO!", fullLineCount);
+            consolCommon::__sleep(500);
             info.presentScore += (fullLineCount * info.presentLevel * 100);
             initialMainCpy(); 
             //텍스트를 지우기 위해 main_cpy을 초기화.(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
         }
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (info.deletedLineCount <= 10) ? 10 - info.deletedLineCount : 0);
+        consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (info.deletedLineCount <= 10) ? 10 - info.deletedLineCount : 0);
     }
 }
 
@@ -644,17 +628,17 @@ void checkLevelUp(Info &info)
 
         for (int i = 0; i < 4; i++)
         {
-            gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 3, MAIN_Y_ADJ + 4);
+            consolCommon::gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 3, MAIN_Y_ADJ + 4);
             printf("             ");
-            gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 2, MAIN_Y_ADJ + 6);
+            consolCommon::gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 2, MAIN_Y_ADJ + 6);
             printf("             ");
-            Sleep(200);
+            consolCommon::__sleep(200);
 
-            gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 3, MAIN_Y_ADJ + 4);
+            consolCommon::gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 3, MAIN_Y_ADJ + 4);
             printf("☆LEVEL UP!☆");
-            gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 2, MAIN_Y_ADJ + 6);
+            consolCommon::gotoxy(MAIN_X_ADJ + (GAME_Board_X_SIZE / 2) - 2, MAIN_Y_ADJ + 6);
             printf("☆SPEED UP!☆");
-            Sleep(200);
+            consolCommon::__sleep(200);
         }
         initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
         //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
@@ -663,12 +647,12 @@ void checkLevelUp(Info &info)
         { //레벨업보상으로 각 레벨-1의 수만큼 아랫쪽 줄을 지워줌 
             for (int j = 1; j < GAME_Board_X_SIZE - 1; j++) {
                 gameBoard[i][j] = eBlockStatus::INACTIVE_BLOCK; // 줄을 블록으로 모두 채우고 
-                gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i); // 별을 찍어줌.. 이뻐보이게 
+                consolCommon::gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i); // 별을 찍어줌.. 이뻐보이게 
                 printf("★");
-                Sleep(20);
+                consolCommon::__sleep(20);
             }
         }
-        Sleep(100); //별찍은거 보여주기 위해 delay 
+        consolCommon::__sleep(100); //별찍은거 보여주기 위해 delay 
         checkFullLine(info); //블록으로 모두 채운것 지우기
         //.checkFullLine()함수 내부에서 presentLevel up flag가 켜져있는 경우 점수는 없음.         
         switch (info.presentLevel)
@@ -708,8 +692,8 @@ void checkLevelUp(Info &info)
 
         bLevelUp = false;
 
-        gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", info.presentLevel);
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - info.deletedLineCount);
+        consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", info.presentLevel);
+        consolCommon::gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - info.deletedLineCount);
     }
 }
 
@@ -726,16 +710,16 @@ void checkGameOver(Info &info)
         if (gameBoard[3][i] == eBlockStatus::INACTIVE_BLOCK
             || gameBoard[3][i] == eBlockStatus::WALL)
         { //천장(위에서 세번째 줄)에 inactive가 생성되면 게임 오버 
-            gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
-            gotoxy(x, y + 1); printf("▤                              ▤");
-            gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
-            gotoxy(x, y + 3); printf("▤  |  G A M E  O V E R..   |   ▤");
-            gotoxy(x, y + 4); printf("▤  +-----------------------+   ▤");
-            gotoxy(x, y + 5); printf("▤   YOUR SCORE: %6d         ▤", info.presentScore);
-            gotoxy(x, y + 6); printf("▤                              ▤");
-            gotoxy(x, y + 7); printf("▤  Press any key to restart..  ▤");
-            gotoxy(x, y + 8); printf("▤                              ▤");
-            gotoxy(x, y + 9); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
+            consolCommon::gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
+            consolCommon::gotoxy(x, y + 1); printf("▤                              ▤");
+            consolCommon::gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
+            consolCommon::gotoxy(x, y + 3); printf("▤  |  G A M E  O V E R..   |   ▤");
+            consolCommon::gotoxy(x, y + 4); printf("▤  +-----------------------+   ▤");
+            consolCommon::gotoxy(x, y + 5); printf("▤   YOUR SCORE: %6d         ▤", info.presentScore);
+            consolCommon::gotoxy(x, y + 6); printf("▤                              ▤");
+            consolCommon::gotoxy(x, y + 7); printf("▤  Press any key to restart..  ▤");
+            consolCommon::gotoxy(x, y + 8); printf("▤                              ▤");
+            consolCommon::gotoxy(x, y + 9); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
             info.lastScore = info.presentScore;
 
 
@@ -744,11 +728,11 @@ void checkGameOver(Info &info)
             { //최고기록 갱신시 
                 FILE* file = fopen("score.dat", "wt");
 
-                gotoxy(x, y + 6); printf("▤  ★★★ BEST SCORE! ★★★   ▤  ");
+                consolCommon::gotoxy(x, y + 6); printf("▤  ★★★ BEST SCORE! ★★★   ▤  ");
 
                 if (file == NULL)
                 { //파일 에러메세지  
-                    gotoxy(0, 0);
+                    consolCommon::gotoxy(0, 0);
                     printf("FILE ERROR: SYSTEM CANNOT WRITE BEST SCORE ON \"SCORE.DAT\"");
                 }
                 else
@@ -757,8 +741,8 @@ void checkGameOver(Info &info)
                     fclose(file);
                 }
             }
-            Sleep(1000);
-            getch();
+            consolCommon::__sleep(1000);
+            consolCommon::__getch();
 
             clearBuffer();
             
@@ -776,19 +760,19 @@ void pauseGame(Info &info)
 
     for (int i = 1; i < GAME_Board_X_SIZE - 2; i++)
     {
-        gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
-        gotoxy(x, y + 1); printf("▤                              ▤");
-        gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
-        gotoxy(x, y + 3); printf("▤  |       P A U S E       |   ▤");
-        gotoxy(x, y + 4); printf("▤  +-----------------------+   ▤");
-        gotoxy(x, y + 5); printf("▤  Press any key to resume..   ▤");
-        gotoxy(x, y + 6); printf("▤                              ▤");
-        gotoxy(x, y + 7); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
+        consolCommon::gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
+        consolCommon::gotoxy(x, y + 1); printf("▤                              ▤");
+        consolCommon::gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
+        consolCommon::gotoxy(x, y + 3); printf("▤  |       P A U S E       |   ▤");
+        consolCommon::gotoxy(x, y + 4); printf("▤  +-----------------------+   ▤");
+        consolCommon::gotoxy(x, y + 5); printf("▤  Press any key to resume..   ▤");
+        consolCommon::gotoxy(x, y + 6); printf("▤                              ▤");
+        consolCommon::gotoxy(x, y + 7); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
     }
 
-    getch(); //키입력시까지 대기 
+    consolCommon::__getch(); //키입력시까지 대기 
 
-    system("cls"); //화면 지우고 새로 그림 
+    consolCommon::clear(); //화면 지우고 새로 그림 
 
     initialMainCpy();
     drawGameBoard();
@@ -837,42 +821,12 @@ void setActiveBlock(int X, int Y)
     }
 }
 
-//only windows
-void setCursorType(eCursorType c)
-{
-    CONSOLE_CURSOR_INFO curInfo;
-    switch (c)
-    {
-    case eCursorType::NO_CURSOR:
-        curInfo.dwSize = 1;
-        curInfo.bVisible = FALSE;
-        break;
-    case eCursorType::SOLID_CURSOR:
-        curInfo.dwSize = 100;
-        curInfo.bVisible = TRUE;
-        break;
-    case eCursorType::NOMAL_CURSOR:
-        curInfo.dwSize = 20;
-        curInfo.bVisible = TRUE;
-        break;
-    default:
-        ASSERT(false, "eCursorType input error");
-        break;
-    }
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &curInfo);
-}
-
-void gotoxy(int x, int y)
-{
-    COORD pos = { 2 * (short)x,(short)y };
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-}
 
 //getch의 버퍼들 모두 비움.
 void clearBuffer()
 {
-    while (kbhit())
+    while (consolCommon::__kbhit())
     {
-        getch();
+        consolCommon::__getch();
     }
 }

@@ -5,3 +5,8 @@
 해당 코드 리팩토링
 
 using x86 windows C++17
+
+
+http://www.martinbroadhurst.com/sleep-for-milliseconds-in-c.html
+
+http://shtrom.ssji.net/skb/getc.html
