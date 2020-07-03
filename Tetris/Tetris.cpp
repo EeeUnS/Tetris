@@ -10,6 +10,8 @@
 
 #pragma comment(lib, "winmm.lib")
 #pragma warning(disable:4996)
+#define FALLTHROUGH
+
 
 #define ASSERT(condition, msg) \
     if(!(condition)){ \
@@ -36,15 +38,14 @@ enum class eKeyBoardInput :int
     //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
 };
 
-enum class eBlockStatus :int
+enum class eBlockStatus
 {
-    ACTIVE_BLOCK = -2, // 게임판배열에 저장될 블록의 상태들 
-    CEILLING = -1,     // 블록이 이동할 수 있는 공간은 0 또는 음의 정수료 표현 
-    EMPTY = 0,        // 블록이 이동할 수 없는 공간은 양수로 표현 
-    WALL = 1,
-    INACTIVE_BLOCK = 2,// 이동이 완료된 블록값 
-    NON_BLCOK = 100 // for copy
-
+    EMPTY,
+    ACTIVE_BLOCK, // 게임판배열에 저장될 블록의 상태들 
+    CEILLING,
+    WALL,
+    INACTIVE_BLOCK, // 이동이 완료된 블록값 
+    NON_BLOCK  // for copy GAMEBLOARD에는 존재하면안됨
 };
 
 enum class eCursorType
@@ -83,16 +84,18 @@ constexpr int STATUS_Y_GOAL = STATUS_Y; //GOAL 정보표시위치 Y 좌표 저�
 constexpr int STATUS_Y_LEVEL = STATUS_Y + 1; //LEVEL 정보표시위치 Y 좌표 저장
 constexpr int STATUS_Y_SCORE = STATUS_Y + 9; //SCORE 정보표시위치 Y 좌표 저장
 
+
+//todo 전역변수 모두 지역변수로 넣기
 int blockType; //블록 종류를 저장 
 int blockRotation; //블록 회전값 저장 
 int blockTypeNext; //다음 블록값 저장 
 
-//게임판의 정보를 저장하는 배열 모니터에 표시후에 main_cpy로 복사됨 
-//즉 maincpy는 게임판이 모니터에 표시되기 전의 정보를 가지고 있음 
-//main의 전체를 계속 모니터에 표시하지 않고(이렇게 하면 모니터가 깜빡거림) 
-//main_cpy와 배열을 비교해서 값이 달라진 곳만 모니터에 고침 
-eBlockStatus main_org[MAIN_Y][MAIN_X];
-eBlockStatus main_cpy[MAIN_Y][MAIN_X];
+//게임판의 정보를 저장하는 배열    모니터에 표시후에 gameBoardCpy로 복사됨 
+//gameBoardCpy는 게임판이 모니터에 표시되기 전의 정보를 가지고 있음 
+//전체를 계속 모니터에 표시하지 않고(이렇게 하면 모니터가 깜빡거림) 
+//gameBoardCpy와 배열을 비교해서 값이 달라진 곳만 모니터에 고침 
+eBlockStatus gameBoard[MAIN_Y][MAIN_X];
+eBlockStatus gameBoardCpy[MAIN_Y][MAIN_X];
 
 int blockX;
 int blockY; //이동중인 블록의 게임판상의 x,y좌표를 저장 
@@ -139,6 +142,7 @@ void setEraseBlock();
 void clearBuffer();
 
 void setActiveBlock(int X, int Y);
+//for windows
 void setCursorType(eCursorType c);
 void gotoxy(int x, int y);
 
@@ -153,13 +157,16 @@ int getRandom(const int min, const int max)
     return range(rnd);
 }
 
-int main() {
-    static_assert(sizeof(main_org) == 23 * 11 * sizeof(eBlockStatus), "error");
+int main()
+{
+    static_assert(static_cast<int>(eBlockStatus::EMPTY) == 0, "EMPTY is not 0");
+    static_assert(sizeof(gameBoard) == 23 * 11 * sizeof(eBlockStatus), "error");
+
     srand((unsigned)time(NULL));
     setCursorType(eCursorType::NO_CURSOR);
-    
+
     drawTitle(); //키보드 누를때까지 여기서 대기
-    
+
     initialBoard(); //게임판 리셋 
     drawInfoBoard(); // 정보화면을 그림
     blockTypeNext = rand() % 7; //다음번에 나올 블록 종류를 랜덤하게 생성 
@@ -277,30 +284,30 @@ void initialBoard(void) {
 
 void initialMainOrg(void)
 {
-    memset(main_org, 0, sizeof(main_org));
+    memset(gameBoard, 0, sizeof(gameBoard));
     for (int j = 1; j < MAIN_X; j++)
     { //y값이 3인 위치에 천장을 만듦 
-        main_org[3][j] = eBlockStatus::CEILLING;
+        gameBoard[3][j] = eBlockStatus::CEILLING;
     }
     for (int i = 1; i < MAIN_Y - 1; i++)
     { //좌우 벽을 만듦  
-        main_org[i][0] = eBlockStatus::WALL;
-        main_org[i][MAIN_X - 1] = eBlockStatus::WALL;
+        gameBoard[i][0] = eBlockStatus::WALL;
+        gameBoard[i][MAIN_X - 1] = eBlockStatus::WALL;
     }
     for (int j = 0; j < MAIN_X; j++)
     { //바닥벽을 만듦 
-        main_org[MAIN_Y - 1][j] = eBlockStatus::WALL;
+        gameBoard[MAIN_Y - 1][j] = eBlockStatus::WALL;
     }
     clearBuffer();
 }
 
-//main_org와 같은 숫자가 없게 하기 위함  게임판에 게임에 사용되지 않는 숫자를 넣음 
+//main_org와 같은 숫자가 없게 하기 위해  게임판에 게임에 사용되지 않는 숫자를 넣음 
 void initialMainCpy(void) {
     for (int i = 0; i < MAIN_Y; i++)
     {
         for (int j = 0; j < MAIN_X; j++)
         {
-            main_cpy[i][j] = eBlockStatus::NON_BLCOK;
+            gameBoardCpy[i][j] = eBlockStatus::NON_BLOCK;
         }
     }
 }
@@ -333,20 +340,20 @@ void drawGameBoard(void)
 { //게임판 그리는 함수 
     for (int j = 1; j < MAIN_X - 1; j++)
     { //천장은 계속 새로운블럭이 지나가서 지워지면 새로 그려줌 
-        if (main_org[3][j] == eBlockStatus::EMPTY)
+        if (gameBoard[3][j] == eBlockStatus::EMPTY)
         {
-            main_org[3][j] = eBlockStatus::CEILLING;
+            gameBoard[3][j] = eBlockStatus::CEILLING;
         }
     }
     for (int i = 0; i < MAIN_Y; i++)
     {
         for (int j = 0; j < MAIN_X; j++)
         {
-            if (main_cpy[i][j] != main_org[i][j])
+            if (gameBoardCpy[i][j] != gameBoard[i][j])
             { //cpy랑 비교해서 값이 달라진 부분만 새로 그려줌.
              //이게 없으면 게임판전체를 계속 그려서 느려지고 반짝거림
                 gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i);
-                switch (main_org[i][j])
+                switch (gameBoard[i][j])
                 {
                 case eBlockStatus::EMPTY: //빈칸모양 
                     printf(GAP);
@@ -370,7 +377,7 @@ void drawGameBoard(void)
             }
         }
     }
-    memcpy(main_cpy, main_org, sizeof(main_org));
+    memcpy(gameBoardCpy, gameBoard, sizeof(gameBoard));
 }
 
 void makeNewBlock(void)
@@ -385,7 +392,7 @@ void makeNewBlock(void)
 
     //게임판 blockX, by위치에 블럭생성  
     setActiveBlock(0, 0);
-    
+
     for (int i = 1; i < 3; i++)
     { //게임상태표시에 다음에 나올블럭을 그림 
         for (int j = 0; j < 4; j++)
@@ -467,14 +474,18 @@ eKeyBoardInput checkKey(void)
                 }
                 break;
             case eKeyBoardInput::P: //P(대문자) 눌렀을때 
-                [[fallthrough]];
+//#ifdef _HAS_CXX17
+//                //only msvc c++17
+//                [[fallthrough]];
+//#endif
+                FALLTHROUGH
             case eKeyBoardInput::p: //p(소문자) 눌렀을때 
                 pauseGame(); //일시정지 
                 break;
             case eKeyBoardInput::ESC: //ESC눌렀을때 
                 system("cls"); //화면을 지우고 
                 exit(0); //게임종료 
-                default:
+            default:
                 break;
             }
         }
@@ -496,9 +507,9 @@ void dropBlock(void)
         { //현재 조작중인 블럭을 굳힘 
             for (int j = 0; j < MAIN_X; j++)
             {
-                if (main_org[i][j] == eBlockStatus::ACTIVE_BLOCK)
+                if (gameBoard[i][j] == eBlockStatus::ACTIVE_BLOCK)
                 {
-                    main_org[i][j] = eBlockStatus::INACTIVE_BLOCK;
+                    gameBoard[i][j] = eBlockStatus::INACTIVE_BLOCK;
                 }
             }
         }
@@ -524,7 +535,9 @@ bool isCrash(int blockX, int blockY, int blockRotation)
     {
         for (int j = 0; j < 4; j++)
         { //지정된 위치의 게임판과 블럭모양을 비교해서 겹치면 false를 리턴 
-            if (BLOCKS[blockType][blockRotation][i][j] == 1 && static_cast<int>(main_org[blockY + i][blockX + j]) > 0)
+            if (BLOCKS[blockType][blockRotation][i][j] == 1 &&
+                (gameBoard[blockY + i][blockX + j] == eBlockStatus::INACTIVE_BLOCK
+                    || gameBoard[blockY + i][blockX + j] == eBlockStatus::WALL))
             {
                 return true;
             }
@@ -571,7 +584,10 @@ void checkLine(void)
         int lineBlockNum = 0; //한줄의 블록갯수를 저장하는 변수  
         for (int j = 1; j < MAIN_X - 1; j++)
         { //벽과 벽사이의 블록갯루를 셈 
-            if (static_cast<int> (main_org[i][j]) > 0)
+            ASSERT(gameBoard[i][j] != eBlockStatus::NON_BLOCK, "non_block");
+
+            if (gameBoard[i][j] == eBlockStatus::INACTIVE_BLOCK
+                || gameBoard[i][j] == eBlockStatus::WALL)
             {
                 lineBlockNum++;
             }
@@ -590,15 +606,15 @@ void checkLine(void)
                 for (int l = 1; l < MAIN_X - 1; l++)
                 {
                     //윗줄이 천장인 경우에는 천장을 한칸 내리면 안되니까 빈칸을 넣음 
-                    if (main_org[k - 1][l] == eBlockStatus::CEILLING)
+                    if (gameBoard[k - 1][l] == eBlockStatus::CEILLING)
                     {
-                        main_org[k][l] = eBlockStatus::EMPTY; 
+                        gameBoard[k][l] = eBlockStatus::EMPTY;
                     }
                     else
                     {
-                        main_org[k][l] = main_org[k - 1][l];
+                        gameBoard[k][l] = gameBoard[k - 1][l];
                     }
-                    
+
                 }
             }
         }
@@ -654,7 +670,7 @@ void checkLevelUp(void)
         for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (presentLevel - 1); i--)
         { //레벨업보상으로 각 레벨-1의 수만큼 아랫쪽 줄을 지워줌 
             for (int j = 1; j < MAIN_X - 1; j++) {
-                main_org[i][j] = eBlockStatus::INACTIVE_BLOCK; // 줄을 블록으로 모두 채우고 
+                gameBoard[i][j] = eBlockStatus::INACTIVE_BLOCK; // 줄을 블록으로 모두 채우고 
                 gotoxy(MAIN_X_ADJ + j, MAIN_Y_ADJ + i); // 별을 찍어줌.. 이뻐보이게 
                 printf("★");
                 Sleep(20);
@@ -693,14 +709,14 @@ void checkLevelUp(void)
             blockDownDelay = 0;
             break;
         default:
-            ASSERT(false, "고려하지않은 레벨");
+            //ASSERT(false, "고려하지않은 레벨");
+            // CASE 10을 유지
             break;
         }
         bLevelUp = false;
 
         gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel);
         gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount);
-
     }
 }
 
@@ -711,7 +727,9 @@ void checkGameOver(void)
 
     for (int i = 1; i < MAIN_X - 2; i++)
     {
-        if (static_cast<int>(main_org[3][i]) > 0)
+        ASSERT(gameBoard[3][i] != eBlockStatus::NON_BLOCK, "non_block");
+        if (gameBoard[3][i] == eBlockStatus::INACTIVE_BLOCK
+            || gameBoard[3][i] == eBlockStatus::WALL)
         { //천장(위에서 세번째 줄)에 inactive가 생성되면 게임 오버 
             gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
             gotoxy(x, y + 1); printf("▤                              ▤");
@@ -761,7 +779,7 @@ void pauseGame(void)
     const int y = 5;
 
     for (int i = 1; i < MAIN_X - 2; i++)
-    { //게임 일시정지 메세지 
+    {
         gotoxy(x, y + 0); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
         gotoxy(x, y + 1); printf("▤                              ▤");
         gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
@@ -774,7 +792,7 @@ void pauseGame(void)
     getch(); //키입력시까지 대기 
 
     system("cls"); //화면 지우고 새로 그림 
-    
+
     initialMainCpy();
     drawGameBoard();
     drawInfoBoard();
@@ -806,7 +824,7 @@ void setEraseBlock()
         {
             if (BLOCKS[blockType][blockRotation][i][j] == 1)
             {
-                main_org[blockY + i][blockX + j] = eBlockStatus::EMPTY;
+                gameBoard[blockY + i][blockX + j] = eBlockStatus::EMPTY;
             }
         }
     }
@@ -820,7 +838,7 @@ void setActiveBlock(int X, int Y)
         {
             if (BLOCKS[blockType][blockRotation][i][j] == 1)
             {
-                main_org[blockY + i + X][blockX + j + Y] = eBlockStatus::ACTIVE_BLOCK;
+                gameBoard[blockY + i + X][blockX + j + Y] = eBlockStatus::ACTIVE_BLOCK;
             }
         }
     }
@@ -851,7 +869,7 @@ void setCursorType(eCursorType c)
 }
 
 void gotoxy(int x, int y)
-{ //gotoxy함수 
+{
     COORD pos = { 2 * (short)x,(short)y };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
