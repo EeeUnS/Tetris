@@ -6,7 +6,6 @@
 #include<assert.h>
 #include<errors.h>
 #include<random>
-#include<chrono>
 
 #pragma comment(lib, "winmm.lib")
 #pragma warning(disable:4996)
@@ -23,7 +22,7 @@
 const char GAP[] = "  ";
 
 //키보드값들 
-enum class eKeyBoardInput :int
+enum class eKeyInput
 {
     NON,
     LEFT = 75, //좌로 이동    
@@ -130,10 +129,10 @@ void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
 void drawInfoBoard(void); //게임 전체 인터페이스를 표시 
 void drawGameBoard(void); //게임판을 그림 
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
-eKeyBoardInput checkKey(void); //키보드로 키를 입력받음 
+eKeyInput checkKey(void); //키보드로 키를 입력받음 
 void dropBlock(void); //블록을 아래로 떨어트림 
 bool isCrash(int blockX, int blockY, int rotation); //blockX, by위치에 rotation회전값을 같는 경우 충돌 판단 
-void moveBlock(eKeyBoardInput dir); //dir방향으로 블록을 움직임 
+void moveBlock(eKeyInput dir); //dir방향으로 블록을 움직임 
 void checkLine(void); //줄이 가득찼는지를 판단하고 지움 
 void checkLevelUp(void); //레벨목표가 달성되었는지를 판단하고 levelup시킴 
 void checkGameOver(void); //게임오버인지 판단하고 게임오버를 진행 
@@ -162,14 +161,13 @@ int main()
     static_assert(static_cast<int>(eBlockStatus::EMPTY) == 0, "EMPTY is not 0");
     static_assert(sizeof(gameBoard) == 23 * 11 * sizeof(eBlockStatus), "error");
 
-    srand((unsigned)time(NULL));
     setCursorType(eCursorType::NO_CURSOR);
 
     drawTitle(); //키보드 누를때까지 여기서 대기
 
     initialBoard(); //게임판 리셋 
     drawInfoBoard(); // 정보화면을 그림
-    blockTypeNext = rand() % 7; //다음번에 나올 블록 종류를 랜덤하게 생성 
+    blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
     makeNewBlock(); //새로운 블록을 하나 만듦  
 
     while (1)
@@ -177,7 +175,7 @@ int main()
         //블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
         for (int i = 0; i < 5; i++)
         {
-            eKeyBoardInput dir = checkKey(); //키입력확인 
+            eKeyInput keyInput = checkKey(); //키입력확인 
             drawGameBoard();
             Sleep(blockDownDelay);
 
@@ -187,7 +185,7 @@ int main()
                 Sleep(100);
             }
 
-            if (dir == eKeyBoardInput::SPACE)
+            if (keyInput == eKeyInput::SPACE)
             { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
                 break;
             }
@@ -385,7 +383,7 @@ void makeNewBlock(void)
     blockX = (MAIN_X / 2) - 1; //블록 생성 위치x좌표(게임판의 가운데) 
     blockY = 0;  //블록 생성위치 y좌표(제일 위) 
     blockType = blockTypeNext; //다음블럭값을 가져옴 
-    blockTypeNext = rand() % 7; //다음 블럭을 만듦 
+    blockTypeNext = getRandom(0, 6);  //다음 블럭을 만듦 
     blockRotation = 0;  //회전은 0번으로 가져옴 
 
     bNeedNewBlock = false; //makeNewBlock flag를 끔  
@@ -411,41 +409,41 @@ void makeNewBlock(void)
     }
 }
 
-eKeyBoardInput checkKey(void)
+eKeyInput checkKey(void)
 {
     int key = 0;
-    eKeyBoardInput dir = eKeyBoardInput::NON;
+    eKeyInput dir = eKeyInput::NON;
 
     if (kbhit())
     {
         key = getch(); //키값을 받음
-        dir = static_cast<eKeyBoardInput>(key);
+        dir = static_cast<eKeyInput>(key);
         //방향키인경우 
         if (key == 224)
         {
             key = getch();
-            dir = static_cast<eKeyBoardInput>(key);
+            dir = static_cast<eKeyInput>(key);
             switch (dir)
             {
-            case eKeyBoardInput::LEFT:
+            case eKeyInput::LEFT:
                 if (!isCrash(blockX - 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eKeyBoardInput::RIGHT:
+            case eKeyInput::RIGHT:
                 if (!isCrash(blockX + 1, blockY, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eKeyBoardInput::DOWN:
+            case eKeyInput::DOWN:
                 if (!isCrash(blockX, blockY + 1, blockRotation))
                 {
                     moveBlock(dir);
                 }
                 break;
-            case eKeyBoardInput::UP:
+            case eKeyInput::UP:
                 if (!isCrash(blockX, blockY, (blockRotation + 1) % 4))
                 {
                     moveBlock(dir);
@@ -454,7 +452,7 @@ eKeyBoardInput checkKey(void)
                 else if (bCrash && !isCrash(blockX, blockY - 1, (blockRotation + 1) % 4))
                 {
                     //바닥에 닿은 경우 위쪽으로 한칸띄워서 회전이 가능하면 그렇게 함(특수동작)
-                    moveBlock(eKeyBoardInput::ROTATABLE_CRASH);
+                    moveBlock(eKeyInput::ROTATABLE_CRASH);
                 }
             default:
                 break;
@@ -464,7 +462,7 @@ eKeyBoardInput checkKey(void)
         { //방향키가 아닌경우 
             switch (dir)
             {
-            case eKeyBoardInput::SPACE: //스페이스키 눌렀을때 
+            case eKeyInput::SPACE: //스페이스키 눌렀을때 
 
                 while (!bCrash)
                 { //바닥에 닿을때까지 이동시킴 
@@ -473,16 +471,16 @@ eKeyBoardInput checkKey(void)
                     gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore); //점수 표시  
                 }
                 break;
-            case eKeyBoardInput::P: //P(대문자) 눌렀을때 
+            case eKeyInput::P: //P(대문자) 눌렀을때 
 //#ifdef _HAS_CXX17
 //                //only msvc c++17
 //                [[fallthrough]];
 //#endif
                 FALLTHROUGH
-            case eKeyBoardInput::p: //p(소문자) 눌렀을때 
+            case eKeyInput::p: //p(소문자) 눌렀을때 
                 pauseGame(); //일시정지 
                 break;
-            case eKeyBoardInput::ESC: //ESC눌렀을때 
+            case eKeyInput::ESC: //ESC눌렀을때 
                 system("cls"); //화면을 지우고 
                 exit(0); //게임종료 
             default:
@@ -519,9 +517,10 @@ void dropBlock(void)
         return;
     }
 
+
     if (!isCrash(blockX, blockY + 1, blockRotation))
     {
-        moveBlock(eKeyBoardInput::DOWN); //밑이 비어있으면 밑으로 한칸 이동 
+        moveBlock(eKeyInput::DOWN); //밑이 비어있으면 밑으로 한칸 이동 
     }
     else
     {
@@ -546,28 +545,28 @@ bool isCrash(int blockX, int blockY, int blockRotation)
     return false; //하나도 안겹치면 true리턴 
 }
 
-void moveBlock(eKeyBoardInput key)
+void moveBlock(eKeyInput key)
 { //블록을 이동시킴 
     setEraseBlock();
     switch (key)
     {
-    case eKeyBoardInput::LEFT:
+    case eKeyInput::LEFT:
         setActiveBlock(0, -1);
         blockX--; //좌표값 이동 
         break;
-    case eKeyBoardInput::RIGHT:
+    case eKeyInput::RIGHT:
         setActiveBlock(0, 1);
         blockX++;
         break;
-    case eKeyBoardInput::DOWN:
+    case eKeyInput::DOWN:
         setActiveBlock(1, 0);
         blockY++;
         break;
-    case eKeyBoardInput::UP: //키보드 위쪽 눌렀을때 회전시킴. 
+    case eKeyInput::UP: //키보드 위쪽 눌렀을때 회전시킴. 
         blockRotation = (blockRotation + 1) % 4; //회전값을 1증가시킴(3에서 4가 되는 경우는 0으로 되돌림) 
         setActiveBlock(0, 0);
         break;
-    case eKeyBoardInput::ROTATABLE_CRASH: //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
+    case eKeyInput::ROTATABLE_CRASH: //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
               //이를 동작시키는 특수동작 
         blockRotation = (blockRotation + 1) % 4;
         setActiveBlock(-1, 0);
@@ -728,6 +727,8 @@ void checkGameOver(void)
     for (int i = 1; i < MAIN_X - 2; i++)
     {
         ASSERT(gameBoard[3][i] != eBlockStatus::NON_BLOCK, "non_block");
+
+        //gameover 검사 기준
         if (gameBoard[3][i] == eBlockStatus::INACTIVE_BLOCK
             || gameBoard[3][i] == eBlockStatus::WALL)
         { //천장(위에서 세번째 줄)에 inactive가 생성되면 게임 오버 
@@ -767,7 +768,7 @@ void checkGameOver(void)
             initialBoard();
             drawInfoBoard();
             drawGameBoard();
-            blockTypeNext = rand() % 7; //다음번에 나올 블록 종류를 랜덤하게 생성 
+            blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
             makeNewBlock(); //새로운 블록을 하나 만듦  
         }
     }
