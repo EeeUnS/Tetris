@@ -53,6 +53,16 @@ enum class eCursorType
     NOMAL_CURSOR
 };
 
+struct Info
+{
+    int presentLevel;
+    int presentScore;
+    int lastScore;
+    int bestScore;
+    int scoreNextLevel;
+    int deletedLineCount;
+};
+
 constexpr int BLOCKS[7][4][4][4] = {
 {{0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0},{0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0},
  {0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0},{0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0}}, // 정사각형
@@ -101,23 +111,6 @@ eBlockStatus gameBoardCpy[MAIN_Y][MAIN_X];
 int blockX;
 int blockY; //이동중인 블록의 게임판상의 x,y좌표를 저장 
 
-// todo menoBoard에 보여줄것 구조체로 묶기
-/*
-level
-goal
-present score
-last score
-bestscore
-*/
-
-int key; //키보드로 입력받은 키값을 저장 
-int presentLevel; //현재 presentLevel 
-int presentScore; //현재 점수 
-int lastScore = 0; //마지막게임점수 
-int bestScore = 0; //최고게임점수 
-int ScoreNextLevel; //다음레벨로 넘어가기 위한 목표점수 
-
-int deletedLineCount; //현재 레벨에서 제거한 줄 수를 저장  
 int blockDownDelay; // 블록 내려오는 딜레이
 
 bool bNeedNewBlock = false; //새로운 블럭이 필요함을 알리는 flag 
@@ -125,20 +118,22 @@ bool bBlockFloorCrash = false; //현재 블록이 바닥에 닿았는지 체크
 bool bLevelUp = false; //다음레벨로 진행(현재 레벨목표가 완료되었음을) 알리는 flag 
 
 void drawTitle(void); //게임시작화면 
-void initialBoard(void); //게임판 초기화 
+void drawGameBoard(void); //게임판을 그림 
+void drawInfoBoard(const Info& info); //게임 전체 인터페이스를 표시 
+void drawUpdateInfoBoard(const Info& info);
+
+void initialBoard(Info& info); //게임판 초기화 
 void initialMainOrg(void); //메인 게임판(main_org[][]를 초기화)
 void initialMainCpy(void); //copy 게임판(main_cpy[][]를 초기화)
-void drawInfoBoard(void); //게임 전체 인터페이스를 표시 
-void drawGameBoard(void); //게임판을 그림 
 void makeNewBlock(void); //새로운 블록을 하나 만듦 
-eKeyInput inputKeyMoveBlock(void); //키보드로 키를 입력받음 
-void dropBlock(void); //블록을 아래로 떨어트림 
+eKeyInput inputKeyMoveBlock(Info& info); //키보드로 키를 입력받음 
+void dropBlock(Info &info); //블록을 아래로 떨어트림 
 bool isCrash(int blockX, int blockY, int rotation); //blockX, by위치에 rotation회전값을 같는 경우 충돌 판단 
 void moveBlock(eKeyInput dir); //dir방향으로 블록을 움직임 
-void checkLine(void); //줄이 가득찼는지를 판단하고 지움 
-void checkLevelUp(void); //레벨목표가 달성되었는지를 판단하고 levelup시킴 
-void checkGameOver(void); //게임오버인지 판단하고 게임오버를 진행 
-void pauseGame(void);//게임을 일시정지시킴 
+void checkFullLine(Info& info); //줄이 가득찼는지를 판단하고 지움 
+void checkLevelUp(Info& info); //레벨목표가 달성되었는지를 판단하고 levelup시킴 
+void checkGameOver(Info& info); //게임오버인지 판단하고 게임오버를 진행 
+void pauseGame(Info& info);//게임을 일시정지시킴 
 void setEraseBlock();
 void clearBuffer();
 
@@ -148,25 +143,25 @@ void setCursorType(eCursorType c);
 void gotoxy(int x, int y);
 
 int getRandom(const int min, const int max);
-void drawUpdateInfo();
 
 int main()
 {
     static_assert(static_cast<int>(eBlockStatus::EMPTY) == 0, "EMPTY is not 0");
     static_assert(sizeof(gameBoard) == 23 * 11 * sizeof(eBlockStatus), "error");
+    Info info;
     setCursorType(eCursorType::NO_CURSOR);
     drawTitle(); //키보드 누를때까지 여기서 대기
     //시작시, 사망후 재시작시 무조건 실행하는 세줄
-    initialBoard(); //게임판 리셋 
-    drawInfoBoard(); // 정보화면을 그림
+    initialBoard(info); //게임판 리셋 
+    drawInfoBoard(info); // 정보화면을 그림
     makeNewBlock(); //새로운 블록을 하나 만듦  
-    drawUpdateInfo();
+    drawUpdateInfoBoard(info);
 
     while (1)
     {
         for (int i = 0; i < 5; i++)
         {//블록이 한칸떨어지는동안 5번 키입력받을 수 있음 
-            eKeyInput keyInput = inputKeyMoveBlock();
+            eKeyInput keyInput = inputKeyMoveBlock(info);
             drawGameBoard();
             if (keyInput == eKeyInput::SPACE)
             { //스페이스바를 누른경우(hard drop) 추가로 이동및 회전할수 없음 break; 
@@ -181,14 +176,14 @@ int main()
             }
         }
 
-        dropBlock(); // 블록을 한칸 내림 
-        checkLevelUp(); // 레벨업을 체크 
-        checkGameOver(); //게임오버를 체크 
+        dropBlock(info); // 블록을 한칸 내림 
+        checkLevelUp(info); // 레벨업을 체크 
+        checkGameOver(info); //게임오버를 체크 
 
         if (bNeedNewBlock)
         {
             makeNewBlock(); // 뉴 블럭 flag가 있는 경우 새로운 블럭 생성 
-            drawUpdateInfo();
+            drawUpdateInfoBoard(info);
         }
     }
 }
@@ -245,24 +240,26 @@ void drawTitle(void) {
 
 }
 
-void initialBoard(void) {
+void initialBoard(Info &info) {
 
     FILE* file = fopen("score.dat", "rt"); // Score.dat파일을 연결 
     if (file == NULL)
     {
-        bestScore = 0;
+        info.bestScore = 0;
     }
     else
     {
-        fscanf(file, "%d", &bestScore); // 파일이 열리면 최고점수를 불러옴 
+        fscanf(file, "%d", &info.bestScore); // 파일이 열리면 최고점수를 불러옴 
         fclose(file); //파일 닫음 
     }
 
-    presentLevel = 1; //각종변수 초기화 
-    presentScore = 0;
-    ScoreNextLevel = 1000;
-    key = 0;
-    deletedLineCount = 0;
+    info.lastScore = 0;
+    info.bestScore = 0;
+    info.presentLevel = 1; //각종변수 초기화 
+    info.presentScore = 0;
+    info.scoreNextLevel = 1000;
+    info.deletedLineCount = 0;
+
     blockDownDelay = 100;
     bBlockFloorCrash = false;
     blockTypeNext = getRandom(0, 6); //다음번에 나올 블록 종류를 랜덤하게 생성 
@@ -303,12 +300,12 @@ void initialMainCpy(void) {
     }
 }
 
-void drawInfoBoard(void)
+void drawInfoBoard(const Info &info)
 { //게임 상태 표시를 나타내는 함수  
 // presentLevel, goal, score만 게임중에 값이 바뀔수 도 있음 그 y값을 따로 저장해둠 
  // 그래서 혹시 게임 상태 표시 위치가 바뀌어도 그 함수에서 안바꿔도 되게.. 
-    gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel);
-    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount);
+    gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", info.presentLevel);
+    gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - info.deletedLineCount);
     gotoxy(STATUS_X_ADJ, STATUS_Y + 2); printf("+-  N E X T  -+ ");
     gotoxy(STATUS_X_ADJ, STATUS_Y + 3); printf("|             | ");
     gotoxy(STATUS_X_ADJ, STATUS_Y + 4); printf("|             | ");
@@ -316,11 +313,11 @@ void drawInfoBoard(void)
     gotoxy(STATUS_X_ADJ, STATUS_Y + 6); printf("|             | ");
     gotoxy(STATUS_X_ADJ, STATUS_Y + 7); printf("+-- -  -  - --+ ");
     gotoxy(STATUS_X_ADJ, STATUS_Y + 8); printf(" YOUR SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore);
+    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", info.presentScore);
     gotoxy(STATUS_X_ADJ, STATUS_Y + 10); printf(" LAST SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 11); printf("        %6d", lastScore);
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 11); printf("        %6d", info.lastScore);
     gotoxy(STATUS_X_ADJ, STATUS_Y + 12); printf(" BEST SCORE :");
-    gotoxy(STATUS_X_ADJ, STATUS_Y + 13); printf("        %6d", bestScore);
+    gotoxy(STATUS_X_ADJ, STATUS_Y + 13); printf("        %6d", info.bestScore);
     gotoxy(STATUS_X_ADJ, STATUS_Y + 15); printf("  △   : Shift        SPACE : Hard Drop");
     gotoxy(STATUS_X_ADJ, STATUS_Y + 16); printf("◁  ▷ : Left / Right   P   : Pause");
     gotoxy(STATUS_X_ADJ, STATUS_Y + 17); printf("  ▽   : Soft Drop     ESC  : Quit");
@@ -385,9 +382,9 @@ void makeNewBlock(void)
     setActiveBlock(0, 0);
 }
 
-void drawUpdateInfo() 
+void drawUpdateInfoBoard(const Info& info)
 {
-    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", presentScore); //점수 표시  
+    gotoxy(STATUS_X_ADJ, STATUS_Y_SCORE); printf("        %6d", info.presentScore); //점수 표시  
     //게임상태표시에 다음에 나올블럭을 그림 
     for (int i = 1; i < 3; i++)
     {
@@ -407,7 +404,7 @@ void drawUpdateInfo()
     }
 }
 
-eKeyInput inputKeyMoveBlock(void)
+eKeyInput inputKeyMoveBlock(Info &info)
 {
     int key = 0;
     eKeyInput inputKey = eKeyInput::NON;
@@ -464,8 +461,8 @@ eKeyInput inputKeyMoveBlock(void)
 
                 while (!bBlockFloorCrash)
                 { //바닥에 닿을때까지 이동시킴 
-                    dropBlock();
-                    presentScore += presentLevel; // hard drop 보너스
+                    dropBlock(info);
+                    info.presentScore += info.presentLevel; // hard drop 보너스
 
                 }
                 break;
@@ -476,7 +473,7 @@ eKeyInput inputKeyMoveBlock(void)
 //#endif
                 FALLTHROUGH
             case eKeyInput::p: //p(소문자) 눌렀을때 
-                pauseGame(); //일시정지 
+                pauseGame(info); //일시정지 
                 break;
             case eKeyInput::ESC: //ESC눌렀을때 
                 system("cls"); //화면을 지우고 
@@ -490,7 +487,7 @@ eKeyInput inputKeyMoveBlock(void)
     return inputKey;
 }
 
-void dropBlock(void)
+void dropBlock(Info &info)
 {
     bool bIsCrash = isCrash(blockX, blockY + 1, blockRotation);
     if (bBlockFloorCrash && bIsCrash) // 11
@@ -506,7 +503,7 @@ void dropBlock(void)
             }
         }
         bBlockFloorCrash = false;
-        checkLine();
+        checkFullLine(info);
         bNeedNewBlock = true;
         return;
     }
@@ -538,7 +535,7 @@ bool isCrash(int blockX, int blockY, int blockRotation)
 }
 
 void moveBlock(eKeyInput key)
-{ //블록을 이동시킴 
+{
     setEraseBlock();
     switch (key)
     {
@@ -559,7 +556,6 @@ void moveBlock(eKeyInput key)
         setActiveBlock(0, 0);
         break;
     case eKeyInput::ROTATABLE_CRASH: //블록이 바닥, 혹은 다른 블록과 닿은 상태에서 한칸위로 올려 회전이 가능한 경우 
-              //이를 동작시키는 특수동작 
         blockRotation = (blockRotation + 1) % 4;
         setActiveBlock(-1, 0);
         blockY--;
@@ -567,29 +563,28 @@ void moveBlock(eKeyInput key)
     }
 }
 
-void checkLine(void)
+void checkFullLine(Info &info)
 {
-    int combo = 0; //콤보갯수 저장하는 변수 지정및 초기화 
+    int fullLineCount = 0;
     for (int i = MAIN_Y - 2; i > 3; )
     { //i=MAIN_Y-2 : 밑쪽벽의 윗칸부터,  i>3 : 천장(3)아래까지 검사 
         int lineBlockNum = 0; //한줄의 블록갯수를 저장하는 변수  
         for (int j = 1; j < MAIN_X - 1; j++)
-        { //벽과 벽사이의 블록갯루를 셈 
-            ASSERT(gameBoard[i][j] != eBlockStatus::NON_BLOCK, "non_block");
-
+        {   //벽과 벽사이의 블록갯루를 셈 
             if (gameBoard[i][j] == eBlockStatus::INACTIVE_BLOCK
                 || gameBoard[i][j] == eBlockStatus::WALL)
             {
                 lineBlockNum++;
             }
         }
+
         if (lineBlockNum == MAIN_X - 2)
         { //블록이 가득 찬 경우 
             if (!bLevelUp)
             { //레벨업상태가 아닌 경우에(레벨업이 되면 자동 줄삭제가 있음) 
-                presentScore += 100 * presentLevel; //점수추가 
-                deletedLineCount++; //지운 줄 갯수 카운트 증가 
-                combo++; //콤보수 증가  
+                info.presentScore += 100 * info.presentLevel; //점수추가 
+                info.deletedLineCount++; //지운 줄 갯수 카운트 증가 
+                fullLineCount++; //콤보수 증가  
             }
 
             for (int k = i; k > 1; k--)
@@ -615,29 +610,28 @@ void checkLine(void)
         }
     }
 
-    if (combo > 0)
+    if (fullLineCount > 0)
     { //줄 삭제가 있는 경우 점수와 레벨 목표를 새로 표시함  
-        if (combo > 1)
+        if (fullLineCount > 1)
         { //2콤보이상인 경우 경우 보너스및 메세지를 게임판에 띄웠다가 지움 
-            gotoxy(MAIN_X_ADJ + (MAIN_X / 2) - 1, MAIN_Y_ADJ + blockY - 2);
-            printf("%d COMBO!", combo);
+            gotoxy(MAIN_X_ADJ + (MAIN_X / 2) - 1, MAIN_Y_ADJ + blockY - 2);printf("%d COMBO!", fullLineCount);
             Sleep(500);
-            presentScore += (combo * presentLevel * 100);
-            initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
-        //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
+            info.presentScore += (fullLineCount * info.presentLevel * 100);
+            initialMainCpy(); 
+            //텍스트를 지우기 위해 main_cpy을 초기화.(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
         }
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (deletedLineCount <= 10) ? 10 - deletedLineCount : 0);
+        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", (info.deletedLineCount <= 10) ? 10 - info.deletedLineCount : 0);
     }
 }
 
-void checkLevelUp(void)
+void checkLevelUp(Info &info)
 {
-    if (deletedLineCount >= 10)
+    if (info.deletedLineCount >= 10)
     { //레벨별로 10줄씩 없애야함. 10줄이상 없앤 경우 
         drawGameBoard();
         bLevelUp = true; //레벨업 flag를 띄움 
-        presentLevel += 1; //레벨을 1 올림 
-        deletedLineCount = 0; //지운 줄수 초기화   
+        info.presentLevel += 1; //레벨을 1 올림 
+        info.deletedLineCount = 0; //지운 줄수 초기화   
 
         for (int i = 0; i < 4; i++)
         {
@@ -656,7 +650,7 @@ void checkLevelUp(void)
         initialMainCpy(); //텍스트를 지우기 위해 main_cpy을 초기화.
         //(main_cpy와 main_org가 전부 다르므로 다음번 draw()호출시 게임판 전체를 새로 그리게 됨) 
 
-        for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (presentLevel - 1); i--)
+        for (int i = MAIN_Y - 2; i > MAIN_Y - 2 - (info.presentLevel - 1); i--)
         { //레벨업보상으로 각 레벨-1의 수만큼 아랫쪽 줄을 지워줌 
             for (int j = 1; j < MAIN_X - 1; j++) {
                 gameBoard[i][j] = eBlockStatus::INACTIVE_BLOCK; // 줄을 블록으로 모두 채우고 
@@ -666,9 +660,9 @@ void checkLevelUp(void)
             }
         }
         Sleep(100); //별찍은거 보여주기 위해 delay 
-        checkLine(); //블록으로 모두 채운것 지우기
-        //.checkLine()함수 내부에서 presentLevel up flag가 켜져있는 경우 점수는 없음.         
-        switch (presentLevel)
+        checkFullLine(info); //블록으로 모두 채운것 지우기
+        //.checkFullLine()함수 내부에서 presentLevel up flag가 켜져있는 경우 점수는 없음.         
+        switch (info.presentLevel)
         {
         case 2:
             blockDownDelay = 50;
@@ -705,12 +699,12 @@ void checkLevelUp(void)
 
         bLevelUp = false;
 
-        gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", presentLevel);
-        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - deletedLineCount);
+        gotoxy(STATUS_X_ADJ, STATUS_Y_LEVEL); printf(" LEVEL : %5d", info.presentLevel);
+        gotoxy(STATUS_X_ADJ, STATUS_Y_GOAL); printf(" GOAL  : %5d", 10 - info.deletedLineCount);
     }
 }
 
-void checkGameOver(void)
+void checkGameOver(Info &info)
 {
     const int x = 5;
     const int y = 5;
@@ -728,14 +722,16 @@ void checkGameOver(void)
             gotoxy(x, y + 2); printf("▤  +-----------------------+   ▤");
             gotoxy(x, y + 3); printf("▤  |  G A M E  O V E R..   |   ▤");
             gotoxy(x, y + 4); printf("▤  +-----------------------+   ▤");
-            gotoxy(x, y + 5); printf("▤   YOUR SCORE: %6d         ▤", presentScore);
+            gotoxy(x, y + 5); printf("▤   YOUR SCORE: %6d         ▤", info.presentScore);
             gotoxy(x, y + 6); printf("▤                              ▤");
             gotoxy(x, y + 7); printf("▤  Press any key to restart..  ▤");
             gotoxy(x, y + 8); printf("▤                              ▤");
             gotoxy(x, y + 9); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
-            lastScore = presentScore;
+            info.lastScore = info.presentScore;
 
-            if (presentScore > bestScore)
+
+
+            if (info.presentScore > info.bestScore)
             { //최고기록 갱신시 
                 FILE* file = fopen("score.dat", "wt");
 
@@ -748,22 +744,23 @@ void checkGameOver(void)
                 }
                 else
                 {
-                    fprintf(file, "%d", presentScore);
+                    fprintf(file, "%d", info.presentScore);
                     fclose(file);
                 }
             }
             Sleep(1000);
+            getch();
 
             clearBuffer();
-
-            initialBoard();
-            drawInfoBoard();
+            
+            initialBoard(info);
+            drawInfoBoard(info);
             drawGameBoard();
         }
     }
 }
 
-void pauseGame(void)
+void pauseGame(Info &info)
 {
     const int x = 5;
     const int y = 5;
@@ -779,30 +776,15 @@ void pauseGame(void)
         gotoxy(x, y + 6); printf("▤                              ▤");
         gotoxy(x, y + 7); printf("▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤▤");
     }
+
     getch(); //키입력시까지 대기 
 
     system("cls"); //화면 지우고 새로 그림 
 
     initialMainCpy();
     drawGameBoard();
-    drawInfoBoard();
-
-    for (int i = 1; i < 3; i++)
-    { // 다음블록 그림 
-        for (int j = 0; j < 4; j++)
-        {
-            if (BLOCKS[blockTypeNext][0][i][j] == 1)
-            {
-                gotoxy(MAIN_X + MAIN_X_ADJ + 3 + j, i + 6);
-                printf("■");
-            }
-            else
-            {
-                gotoxy(MAIN_X + MAIN_X_ADJ + 3 + j, i + 6);
-                printf(GAP);
-            }
-        }
-    }
+    drawInfoBoard(info);
+    drawUpdateInfoBoard(info);
 }
 
 
