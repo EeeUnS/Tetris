@@ -6,6 +6,12 @@
 #include<errors.h>
 #include<random>
 
+/*
+TODO:
+1. 전역변수 집어넣기
+2. linux테스트
+3. class?
+*/
 
 #define FALLTHROUGH
 
