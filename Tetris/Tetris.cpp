@@ -11,6 +11,7 @@ TODO:
 1. 전역변수 집어넣기
 2. linux테스트
 3. class?
+핸재 블럭을 하나의 개체로 보자
 */
 
 #define FALLTHROUGH
